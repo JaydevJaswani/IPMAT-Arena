@@ -1,0 +1,8 @@
+name = "ipmat-arena"
+main = "index.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ipmat-arena"
+database_id = "11d1e8b1-2faa-43a6-83c9-95c5d4e208d0"

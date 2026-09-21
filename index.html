@@ -1,0 +1,390 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IPMAT Arena — Quants</title>
+<meta name="description" content="Daily Quants practice for IPMAT — streaks, tests and a live leaderboard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F4F1FB; --card:#FFFFFF; --card2:#FBF9FF;
+  --ink:#1A1330; --muted:#6B6187; --faint:#9A90B5; --line:#ECE6F7;
+  --primary:#FF4D2E; --pink:#FF3D8B; --blue:#2E6BFF; --green:#08C08A; --amber:#FF9F1C; --violet:#7C5CFF;
+  --good:#08B981; --bad:#F4335F; --gold:#FFB800;
+  --disp:'Bricolage Grotesque','Trebuchet MS',sans-serif; --body:'Plus Jakarta Sans',system-ui,sans-serif; --mono:'Space Mono',ui-monospace,monospace;
+  --r:18px; --r-sm:12px; --shadow:0 10px 30px -14px rgba(80,40,120,.28);
+}
+*{box-sizing:border-box} html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(70% 40% at 85% -8%,rgba(255,61,139,.16),transparent 60%),radial-gradient(60% 40% at -5% 2%,rgba(46,107,255,.12),transparent 60%);background-attachment:fixed;}
+.wrap{max-width:520px;margin:0 auto;padding-block:0 44px;padding-left:16px;padding-right:16px;}
+h1,h2,h3{font-family:var(--disp);line-height:1.05;text-wrap:balance;margin:0;letter-spacing:-.02em;}
+.mono{font-family:var(--mono)} .tnum{font-variant-numeric:tabular-nums}
+button{font-family:var(--body);cursor:pointer;border:0;background:none;color:inherit}
+[hidden]{display:none!important}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;padding:14px 0 12px;background:linear-gradient(var(--bg) 74%,transparent);}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--disp);font-weight:800;font-size:18px;letter-spacing:-.02em}
+.brand .dot{width:13px;height:13px;border-radius:4px;background:var(--primary);box-shadow:0 3px 10px -2px var(--primary)}
+.streakpill{display:flex;align-items:center;gap:6px;background:#FFF;border:1px solid var(--line);box-shadow:var(--shadow);padding:7px 13px;border-radius:999px;font-weight:700;font-size:14px}
+.streakpill b{font-family:var(--mono);color:var(--primary)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+.section-h{display:flex;align-items:baseline;justify-content:space-between;margin:24px 4px 12px}
+.section-h h2{font-size:22px;font-weight:800} .section-h .link{color:var(--primary);font-weight:700;font-size:13.5px;cursor:pointer}
+.hero{border-radius:22px;padding:26px 22px 24px;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,#FF6A3D 0%,#FF3D8B 58%,#B14BFF 100%);box-shadow:0 20px 40px -18px rgba(255,61,139,.6)}
+.hero .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;opacity:.9}
+.hero h1{font-size:clamp(34px,11vw,50px);font-weight:800;margin-top:10px;color:#fff}.hero h1 .b{display:block}.hero h1 .b2{opacity:.72}
+.hero p.sub{margin:14px 0 0;font-size:15px;max-width:40ch;opacity:.95}.hero .kick{font-weight:800}
+.hero .spark{position:absolute;right:-10px;top:-12px;font-size:120px;opacity:.16;transform:rotate(8deg)}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 12px;box-shadow:var(--shadow)}
+.stat .n{font-family:var(--mono);font-weight:700;font-size:22px;line-height:1}
+.stat .l{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-top:6px;font-weight:700}
+.stat.c1 .n{color:var(--primary)}.stat.c2 .n{color:var(--blue)}.stat.c3 .n{color:var(--amber)}
+label.fl{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 7px}
+input{width:100%;background:var(--card2);color:var(--ink);border:1.5px solid var(--line);border-radius:var(--r-sm);padding:14px;font-size:16px;font-family:var(--mono);letter-spacing:.02em}
+input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}
+input:focus,button:focus-visible{outline:2.5px solid var(--primary);outline-offset:2px}
+.verifybar{display:flex;gap:10px;margin-top:12px}.verifybar input{flex:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;background:var(--primary);color:#fff;font-weight:800;font-family:var(--disp);letter-spacing:-.01em;font-size:18px;padding:16px;border-radius:14px;box-shadow:0 12px 24px -10px var(--primary);transition:transform .08s,filter .15s}
+.btn:hover{filter:brightness(1.05)}.btn:active{transform:translateY(1px)} .btn[disabled]{opacity:.55}
+.btn.sm{font-size:15px;padding:13px 18px;width:auto;white-space:nowrap}
+.btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+.btn.blue{background:var(--blue);box-shadow:0 12px 24px -10px var(--blue)}
+.who-ok{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px 14px;border-radius:12px;background:linear-gradient(90deg,color-mix(in srgb,var(--green) 16%,#fff),#fff);border:1.5px solid color-mix(in srgb,var(--green) 45%,transparent)}
+.who-ok .av{width:40px;height:40px;border-radius:11px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:800;font-family:var(--disp)}
+.who-ok .nm{font-weight:800}.who-ok .bt{font-size:12.5px;color:var(--muted);font-family:var(--mono)}.who-ok .tick{margin-left:auto;color:var(--green);font-weight:800;font-size:20px}
+.err{color:var(--bad);font-weight:700;font-size:14px;margin-top:12px;display:flex;gap:7px;align-items:center}
+.hint{color:var(--faint);font-size:12.5px;text-align:center;margin-top:14px}.hint b{color:var(--muted);font-family:var(--mono)}
+/* hub tiles */
+.tiles{display:grid;gap:12px;margin-top:16px}
+.tile{display:flex;align-items:center;gap:15px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 17px;box-shadow:var(--shadow);width:100%;transition:transform .1s}
+.tile:active{transform:scale(.99)}
+.tile .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;flex:none}
+.tile.daily .ic{background:linear-gradient(135deg,#FF6A3D,#FF3D8B);color:#fff}
+.tile.tests .ic{background:color-mix(in srgb,var(--blue) 14%,#fff)}
+.tile.board .ic{background:color-mix(in srgb,var(--amber) 18%,#fff)}
+.tile .tt{font-family:var(--disp);font-weight:800;font-size:18px}.tile .ts{font-size:13px;color:var(--muted)}
+.tile .go{margin-left:auto;color:var(--faint);font-size:22px}
+.tile .done{margin-left:auto;color:var(--good);font-weight:800;font-size:13px}
+/* quiz */
+.qtop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.dots{display:flex;gap:5px;flex-wrap:wrap}.dots i{width:20px;height:6px;border-radius:3px;background:var(--line);transition:background .2s}
+.dots i.done{background:var(--green)}.dots i.now{background:var(--primary)}.dots i.wrong{background:var(--bad)}
+.timer{font-family:var(--mono);font-weight:700;font-size:16px;background:#fff;border:1.5px solid var(--line);padding:6px 12px;border-radius:999px;box-shadow:var(--shadow)}.timer.low{color:var(--bad);border-color:var(--bad)}
+.qmeta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px}
+.chip{font-size:11.5px;font-weight:800;letter-spacing:.03em;padding:5px 11px;border-radius:999px}
+.chip.t{color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,#fff)}
+.chip.warm{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.exam{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,#fff)}.chip.heavy{color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,#fff)}.chip.n{color:var(--muted);background:var(--card2)}
+.qtext{font-size:20px;font-family:var(--disp);font-weight:600;line-height:1.32;letter-spacing:-.01em}.qtext sup{font-size:.68em}
+.answers{margin-top:18px;display:grid;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;background:var(--card2);border:1.5px solid var(--line);border-radius:13px;padding:14px 15px;font-size:17px;transition:border-color .12s,background .12s;color:var(--ink)}
+.opt:hover{border-color:var(--faint)}.opt .k{font-family:var(--mono);font-weight:700;color:var(--faint);width:20px}
+.opt.sel{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 8%,#fff)}
+.opt.correct{border-color:var(--green);background:color-mix(in srgb,var(--green) 12%,#fff)}.opt.miss{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 9%,#fff)}
+.numin input{font-size:22px;text-align:center}
+.fb{margin-top:16px;border-radius:13px;padding:15px 16px;border:1.5px solid var(--line);background:var(--card2)}
+.fb.ok{border-color:color-mix(in srgb,var(--green) 45%,transparent);background:color-mix(in srgb,var(--green) 8%,#fff)}
+.fb.no{border-color:color-mix(in srgb,var(--bad) 40%,transparent);background:color-mix(in srgb,var(--bad) 6%,#fff)}
+.fb .verdict{font-family:var(--disp);font-weight:800;font-size:19px;display:flex;align-items:center;gap:8px;width:100%}
+.fb.ok .verdict{color:var(--good)}.fb.no .verdict{color:var(--bad)}
+.fb .tag{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:800}
+.fb .ans{font-family:var(--mono);font-weight:700;margin-top:2px}.fb .trap{color:var(--muted);font-size:14px;margin-top:10px}
+.fb .sol{color:var(--ink);font-size:13px;margin-top:10px;white-space:pre-line;font-family:var(--mono);background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 12px;line-height:1.6}
+.scorebig{font-family:var(--disp);font-weight:800;font-size:72px;line-height:.9;letter-spacing:-.03em;color:var(--primary)}.scorebig .slash{color:var(--faint);font-size:34px}
+.resline{color:var(--muted);font-size:15px;margin-top:6px}
+.rewards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.reward{background:var(--card2);border:1.5px solid var(--line);border-radius:13px;padding:13px 14px}.reward .n{font-family:var(--mono);font-weight:700;font-size:20px}.reward .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:700;margin-top:4px}.reward.xp .n{color:var(--amber)}.reward.st .n{color:var(--primary)}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.badge{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;background:#fff;border:1.5px solid var(--line);padding:8px 12px;border-radius:999px}.badge .e{font-size:16px}
+.aspire{margin-top:18px}.aspire .t{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:8px;font-weight:600}
+.track{height:14px;border-radius:999px;background:var(--card2);border:1.5px solid var(--line);position:relative;overflow:hidden}
+.fillbar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--green),var(--amber),var(--primary));width:0;transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+.cut{position:absolute;top:-6px;bottom:-6px;width:2.5px;background:var(--ink);z-index:2}.cut b{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap;font-weight:800}
+.aspire .msg{font-size:14.5px;color:var(--primary);font-weight:700;margin-top:15px}
+/* tests list */
+.tcard{display:flex;align-items:center;gap:14px;text-align:left;width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow);margin-bottom:10px}
+.tcard .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:color-mix(in srgb,var(--violet) 12%,#fff);flex:none}
+.tcard .tt{font-family:var(--disp);font-weight:800;font-size:16px}.tcard .ts{font-size:12.5px;color:var(--muted)}.tcard .go{margin-left:auto;color:var(--faint);font-size:20px}
+/* leaderboard */
+.tabs{display:flex;gap:6px;margin:2px 0 14px;overflow-x:auto}
+.tab{white-space:nowrap;font-size:13.5px;font-weight:700;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);color:var(--muted);background:#fff}.tab.on{color:#fff;background:var(--primary);border-color:var(--primary)}
+.league{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.crest{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,#FFE08A,#FFB800);box-shadow:0 8px 18px -8px var(--gold)}
+.league .nm{font-family:var(--disp);font-weight:800;font-size:20px}.league .sub{font-size:12.5px;color:var(--muted)}
+.row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:13px;border:1.5px solid transparent}.row+.row{margin-top:3px}
+.row .rk{font-family:var(--mono);font-weight:700;width:26px;text-align:right;color:var(--muted)}
+.row .av{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-family:var(--disp);color:#fff;font-size:14px}
+.row .who{flex:1;min-width:0}.row .who .n{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row .who .bt{font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+.row .sc{font-family:var(--mono);font-weight:700;font-size:16px}
+.row.you{background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 12%,#fff),#fff);border-color:var(--primary)}.row.top3 .rk{color:var(--gold)}
+.empty{color:var(--muted);text-align:center;padding:24px 10px;font-size:14px}
+.foot{color:var(--faint);font-size:12px;text-align:center;margin-top:26px;line-height:1.6}
+.pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:sp 1s linear infinite;margin:20px auto}@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="wrap">
+  <div class="top"><div class="brand"><span class="dot"></span> IPMAT&nbsp;Arena</div><div class="streakpill" id="topStreak" hidden>🔥 <b>0</b>&nbsp;day streak</div></div>
+
+  <!-- LOGIN -->
+  <section id="login">
+    <div class="hero"><div class="spark">🔥</div><div class="eyebrow">Quants · Daily practice</div>
+      <h1><span class="b">10 questions.</span><span class="b b2">12 minutes.</span><span class="b">No excuses.</span></h1>
+      <p class="sub">Solve fast, climb the board, keep the streak alive. <span class="kick">IIM Indore doesn't wait.</span></p></div>
+    <div class="card" style="margin-top:16px">
+      <label class="fl" for="pin">Enter your IMS PIN to start</label>
+      <div class="verifybar"><input id="pin" placeholder="your IMS PIN" autocomplete="off" spellcheck="false"><button class="btn sm blue" id="loginBtn">Enter</button></div>
+      <div id="loginOut"></div>
+      <p class="hint">Your PIN is checked against the IMS database. Batch is fetched automatically.</p>
+    </div>
+  </section>
+
+  <!-- HUB -->
+  <section id="hub" hidden></section>
+
+  <!-- QUIZ (daily) -->
+  <section id="quiz" hidden>
+    <div class="qtop"><div class="dots" id="dots"></div><div class="timer" id="timer">12:00</div></div>
+    <div class="card"><div class="qmeta" id="qmeta"></div><div class="qtext" id="qtext"></div><div class="answers" id="answers"></div><div id="fbWrap"></div><div style="margin-top:18px" id="qbtns"></div></div>
+    <p class="hint">MCQ +4 / −1 · type-in +4 / 0</p>
+  </section>
+
+  <!-- RESULTS (daily) -->
+  <section id="results" hidden></section>
+
+  <!-- TESTS list -->
+  <section id="tests" hidden>
+    <div class="section-h" style="margin-top:8px"><h2>Practice tests</h2><span class="link" id="testsBack">← Home</span></div>
+    <div id="testList"></div>
+  </section>
+
+  <!-- TEST player -->
+  <section id="testplay" hidden>
+    <div class="qtop"><div class="dots" id="tpDots"></div><span class="link" id="tpQuit">Quit</span></div>
+    <div class="card"><div class="qmeta" id="tpMeta"></div><div class="qtext" id="tpText"></div><div class="answers" id="tpAnswers"></div><div style="margin-top:18px" id="tpBtns"></div></div>
+  </section>
+
+  <!-- TEST results -->
+  <section id="testresults" hidden></section>
+
+  <!-- LEADERBOARD -->
+  <section id="board" hidden>
+    <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2><span class="link" id="boardBack">← Home</span></div>
+    <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily 10</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button><button class="tab" data-t="batch">Batch vs Batch</button></div>
+    <div class="card"><div class="league"><div class="crest">🏆</div><div><div class="nm">Gold League</div><div class="sub" id="leagueSub">Same 10 for everyone — fair by design.</div></div></div><div id="rows"></div></div>
+    <p class="foot">IPMAT Arena · IMS Ahmedabad · Prepared by JJ</p>
+  </section>
+</div>
+
+<script>
+"use strict";
+const CONFIG={API:"https://ipmat-arena.jaydev-jaswani.workers.dev"};
+const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const today=()=>new Date().toISOString().slice(0,10);
+let ME=null;
+async function api(path,opts){const r=await fetch(CONFIG.API+path,opts);return r.json();}
+function saveSession(){try{sessionStorage.setItem("ims_arena",JSON.stringify(ME));}catch(e){}}
+function loadSession(){try{const s=sessionStorage.getItem("ims_arena");if(s)ME=JSON.parse(s);}catch(e){}}
+
+/* seeded RNG so the Daily 10 is identical for everyone that day */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function seedFor(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+let RNG=Math.random;
+const R=(a,b)=>Math.floor(RNG()*(b-a+1))+a, pick=a=>a[Math.floor(RNG()*a.length)];
+const gcd=(a,b)=>b?gcd(b,a%b):Math.abs(a), lcm=(a,b)=>Math.abs(a/gcd(a,b)*b);
+const shuffle=a=>a.map(v=>[RNG(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+const sgn=n=>(n>=0?" + "+n:" − "+(-n)), sup=e=>"<sup>"+e+"</sup>";
+
+/* ---- templated generators (14) ---- */
+const GENS=[
+ {topic:"Linear Equations",tier:"Warm-Up",make(){const son=R(11,20),k=R(3,6),T=R(4,son-3),f=k*(son-T)+T,sum=f+son;return{kind:"int",answer:f,q:`The present ages of a father and his son add up to ${sum} years. ${T} years ago, the father was ${k} times as old as his son. Find the father's present age.`,trap:`Two equations: sum now, and the ${k}× relation ${T} years ago.`,sol:`Let son=s ⇒ father=${sum}−s.\n${T} yrs ago: (${sum}−s−${T})=${k}(s−${T}) ⇒ s=${son}, father=${f}.`};}},
+ {topic:"Linear Equations",tier:"Warm-Up",make(){const x=R(2,9),y=R(2,9),a=R(2,5),b=R(2,5),a2=a+R(1,4),c1=a*x+b*y,c2=a2*x-b*y;return{kind:"int",answer:x*y,q:`If ${a}x + ${b}y = ${c1} and ${a2}x − ${b}y = ${c2}, find x·y.`,trap:`Add the equations — the y-terms cancel.`,sol:`Add ⇒ ${a+a2}x=${c1+c2} ⇒ x=${x}, y=${y}. x·y=${x*y}.`};}},
+ {topic:"Surds & Indices",tier:"Warm-Up",make(){const c=R(1,2),d=R(-3,-1),a=3*c+R(1,3),x=R(2,6),b=3*(c*x+d)-a*x;return{kind:"int",answer:x,q:`If 2${sup("("+a+"x"+sgn(b)+")")} = 8${sup("("+c+"x"+sgn(d)+")")}, find x.`,trap:`8=2³. Rewrite base 2, equate exponents.`,sol:`8=2³ ⇒ ${a}x${sgn(b)}=3(${c}x${sgn(d)}) ⇒ x=${x}.`};}},
+ {topic:"Surds & Indices",tier:"Exam-Relevant",make(){const p=R(3,5),k=pick([2,4,6].filter(v=>2**p>v)),num=2**p-k,den=2**p,g=gcd(num,den),ans=`${num/g}/${den/g}`,opts=shuffle([ans,`${num/g}/${den/g*2}`,`${num/g+1}/${den/g}`,`1/${den/g}`]);return{kind:"mcq",answer:ans,options:opts,q:`Simplify:  (2${sup("(n+"+p+")")} − ${k}·2${sup("n")}) / (2·2${sup("(n+"+(p-1)+")")}).`,trap:`Factor 2ⁿ out of top and bottom.`,sol:`Top=2ⁿ(2${sup(p)}−${k})=2ⁿ(${num}); Bottom=2ⁿ·${den}. Ratio=${ans}.`};}},
+ {topic:"Number System",tier:"Exam-Relevant",make(){const N=R(140,300),p=pick([3,4,6]),q=pick([4,6,8,9].filter(v=>v!==p)),L=lcm(p,q),both=Math.floor(N/p)+Math.floor(N/q)-Math.floor(N/L),ans=N-both;return{kind:"int",answer:ans,q:`How many integers from 1 to ${N} are divisible by neither ${p} nor ${q}?`,trap:`Overlap uses LCM(${p},${q})=${L}, not ${p}×${q}.`,sol:`⌊${N}/${p}⌋+⌊${N}/${q}⌋−⌊${N}/${L}⌋=${both}. Neither=${N}−${both}=${ans}.`};}},
+ {topic:"Number System",tier:"Exam-Relevant",make(){const m=pick([2,3]),div=10**m+1,ex=m===2?"4747":"473473",fac=m===2?"101 (prime)":"1001=7×11×13";return{kind:"int",answer:div,q:`A number is formed by writing a ${m}-digit number twice in a row (e.g. ${ex}). What is the largest number that necessarily divides every such number?`,trap:`Block written twice = block × ${div}.`,sol:`B twice = B×10${sup(m)}+B = B×${div} (${fac}).`};}},
+ {topic:"Number Theory",tier:"Heavy & Tricky",make(){const p=pick([7,11,13,17]),a=p-1,n=pick([50,80,99,100,101,150]),ans=n%2===0?1:p-1;return{kind:"int",answer:ans,q:`Find the remainder when ${a}${sup(n)} is divided by ${p}.`,trap:`${a}≡−1 (mod ${p}). Even→+1, odd→−1.`,sol:`${a}≡−1 ⇒ (−1)${sup(n)}=${n%2===0?"+1":"−1"}≡${ans} (mod ${p}).`};}},
+ {topic:"Surds & Indices",tier:"Warm-Up",make(){const b=pick([2,3,5,6,7]),a=b+2,ans=`√${a}`,opts=shuffle([`√${a}`,`√${b}`,`2√${a}`,`${a-b}`]);return{kind:"mcq",answer:ans,options:opts,q:`Simplify:  1/(√${a} + √${b}) + 1/(√${a} − √${b}).`,trap:`Combine over (√${a})²−(√${b})²=${a-b}.`,sol:`=2√${a}/${a-b}=√${a}.`};}},
+ {topic:"Surds & Indices",tier:"Heavy & Tricky",make(){const items=[{i:"7 + 4√3",o:"2 + √3",w:["3 + √2","4 + √3","2 + 2√3"]},{i:"7 − 4√3",o:"2 − √3",w:["√3 − 2","3 − √2","2 − 2√3"]},{i:"11 + 6√2",o:"3 + √2",w:["2 + 3√2","√2 + 3√3","3 + 2√2"]},{i:"8 + 2√15",o:"√5 + √3",w:["√8 + √15","4 + √15","√6 + √2"]}],it=pick(items),opts=shuffle([it.o,...it.w]);return{kind:"mcq",answer:it.o,options:opts,q:`Find the value of  √(${it.i}).`,trap:`Write x+y√z as (√a+√b)².`,sol:`(${it.o})² = ${it.i}. ✓`};}},
+ {topic:"Number System",tier:"Heavy & Tricky",make(){const c=pick([{H:12,P:10368,k:72,n:2},{H:6,P:1080,k:30,n:4},{H:5,P:1500,k:60,n:4},{H:4,P:1600,k:100,n:4}]);return{kind:"int",answer:c.n,q:`The HCF of two numbers is ${c.H} and their product is ${c.P}. How many unordered pairs of such numbers are possible?`,trap:`Numbers=${c.H}m,${c.H}n, gcd(m,n)=1. Count coprime pairs.`,sol:`m·n=${c.P}/${c.H}²=${c.k}. Coprime pairs = 2^(distinct primes−1)=${c.n}.`};}},
+ {topic:"Number System",tier:"Warm-Up",make(){const diff=R(1,4),b=R(1,9-diff),a=b+diff,S=a+b,D=9*diff,num=10*a+b;return{kind:"int",answer:num,q:`A two-digit number has digits that add up to ${S}. Subtracting ${D} from it reverses its digits. Find the number.`,trap:`a+b=${S}, a−b=${diff}.`,sol:`a=${a}, b=${b} ⇒ ${num}.`};}},
+ {topic:"Percentages",tier:"Warm-Up",make(){const up=pick([10,20,25,50]),dn=pick([10,20,25]),after=100*(1+up/100)*(1-dn/100),net=Math.round(after-100);return{kind:"int",answer:net,q:`A price is increased by ${up}% then decreased by ${dn}%. Net percentage change is ___ % (negative if a decrease).`,trap:`Successive % don't add. Net=${up}−${dn}−${up}·${dn}/100.`,sol:`100→${100*(1+up/100)}→${after}. Net=${net}%.`};}},
+ {topic:"Averages & Ratio",tier:"Exam-Relevant",make(){const n=pick([5,6,8,10]),avg=R(20,40),wrong=R(10,60),right=wrong+pick([9,18,27,-9,-18]),na=avg+(right-wrong)/n;return{kind:"int",answer:Math.round(na*100)/100,q:`The average of ${n} numbers is ${avg}. One value was read as ${wrong} instead of ${right}. Find the corrected average.`,trap:`Only the sum shifts by (${right}−${wrong}), over ${n}.`,sol:`Corrected = ${avg}+(${right-wrong})/${n} = ${Math.round(na*100)/100}.`};}},
+ {topic:"Time, Speed & Distance",tier:"Exam-Relevant",make(){const d=pick([120,150,180,240,300]),s1=pick([30,40,60]),s2=s1+pick([10,20,30]),diff=d/s1-d/s2,ans=Math.round(diff*100)/100;return{kind:"int",answer:ans,q:`A car covers ${d} km. At ${s1} km/h it takes how many more hours than at ${s2} km/h?`,trap:`Time=distance÷speed each, then subtract.`,sol:`${d}/${s1}−${d}/${s2}=${ans} h.`};}}
+];
+const tierClass=t=>t.startsWith("Warm")?"warm":t.startsWith("Exam")?"exam":"heavy";
+
+/* ================= SCREENS ================= */
+function show(id){["login","hub","quiz","results","tests","testplay","testresults","board"].forEach(s=>$("#"+s).hidden=(s!==id));window.scrollTo({top:0,behavior:"instant"});}
+
+/* ---- LOGIN ---- */
+async function doLogin(){
+  const pin=($("#pin").value||"").trim().toUpperCase(),out=$("#loginOut");
+  if(!pin){out.innerHTML=`<div class="err">✗ Enter your PIN.</div>`;return;}
+  out.innerHTML=`<div class="spin"></div>`;
+  try{const r=await api("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin})});
+    if(!r.ok){out.innerHTML=`<div class="err">✗ PIN not found — check with your mentor.</div>`;return;}
+    ME={pin,name:r.name,batch:r.batch};saveSession();out.innerHTML="";openHub();
+  }catch(e){out.innerHTML=`<div class="err">✗ Network error — try again.</div>`;}
+}
+$("#loginBtn").onclick=doLogin; $("#pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+
+/* ---- HUB ---- */
+async function openHub(){
+  show("hub");const h=$("#hub");
+  h.innerHTML=`<div class="hero"><div class="spark">👋</div><div class="eyebrow">Welcome back</div><h1>${ME.name.split(" ")[0]}.</h1><p class="sub">Batch ${ME.batch} · Gold League. Let's move some ranks today.</p></div>
+    <div class="statrow"><div class="stat c1"><div class="n tnum" id="hRank">—</div><div class="l">Today's rank</div></div><div class="stat c2"><div class="n tnum" id="hStreak">—</div><div class="l">Day streak</div></div><div class="stat c3"><div class="n tnum" id="hXp">—</div><div class="l">XP</div></div></div>
+    <div class="tiles">
+      <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily 10</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
+      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Practice tests</span><span class="ts">Topic sets from JJ's decks</span></span><span class="go">→</span></button>
+      <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
+    </div>`;
+  $("#tDaily").onclick=startDaily; $("#tTests").onclick=openTests; $("#tBoard").onclick=()=>openBoard("daily");
+  updateStreakPill(0);
+  try{const m=await api("/me?pin="+encodeURIComponent(ME.pin));if(m.ok){$("#hStreak").textContent=m.streak;$("#hXp").textContent=m.xp;updateStreakPill(m.streak);
+    if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="done">✓ done today</span>`;}}catch(e){}
+  try{const lb=await api("/leaderboard?type=daily&day="+today());if(lb.ok){const i=lb.rows.findIndex(x=>x.name===ME.name);$("#hRank").textContent=i>=0?"#"+(i+1):"—";}}catch(e){}
+}
+function updateStreakPill(n){const p=$("#topStreak");p.hidden=false;p.innerHTML=`🔥 <b>${n}</b>&nbsp;day streak`;}
+
+/* ---- DAILY 10 ---- */
+let deck=[],idx=0,answers=[],sel=null,locked=false,tLeft=720,timerId=null,myScore=0;
+function buildDaily(){
+  RNG=mulberry32(seedFor("daily-"+today()));
+  const byTier=t=>GENS.filter(g=>g.tier===t),want=[["Warm-Up",4],["Exam-Relevant",3],["Heavy & Tricky",3]],chosen=[];
+  want.forEach(([t,c])=>{const pool=shuffle(byTier(t));for(let i=0;i<c;i++)chosen.push(pool[i%pool.length]);});
+  deck=chosen.map(g=>({...g.make(),topic:g.topic,tier:g.tier}));
+  RNG=Math.random; idx=0; answers=[]; myScore=0;
+}
+const WIN=["Clean. Next.","That's the one.","Locked in. 🔥","Textbook.","No wasted moves."];
+const LOSE=["Nope — but now you'll remember it.","Ouch. Classic trap.","Off by a hair. Read the trap 👇","Not today. Its twin returns.","Method over the miss."];
+function startDaily(){buildDaily();show("quiz");showQ();startTimer();}
+function renderDots(box){box.innerHTML="";deck.forEach((q,i)=>{const s=el("i");if(i<idx)s.classList.add(answers[i]&&answers[i].correct?"done":"wrong");else if(i===idx)s.classList.add("now");box.appendChild(s);});}
+function showQ(){
+  sel=null;locked=false;const q=deck[idx];renderDots($("#dots"));
+  $("#qmeta").innerHTML="";$("#qmeta").append(el("span","chip t",q.topic),el("span","chip "+tierClass(q.tier),q.tier),el("span","chip n","Q"+(idx+1)+" / 10"));
+  $("#qtext").innerHTML=q.q;const A=$("#answers");A.innerHTML="";$("#fbWrap").innerHTML="";
+  if(q.kind==="mcq")q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");b.onclick=()=>{if(locked)return;sel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});
+  else{const w=el("div","numin"),inp=el("input");inp.id="numAns";inp.type="text";inp.inputMode="numeric";inp.placeholder="type your answer";inp.autocomplete="off";inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&!locked)$("#submitBtn").click();});w.appendChild(inp);A.appendChild(w);}
+  const btns=$("#qbtns");btns.innerHTML="";const sb=el("button","btn","Lock it in");sb.id="submitBtn";sb.onclick=submitQ;btns.appendChild(sb);
+  if(q.kind==="int")setTimeout(()=>{const n=$("#numAns");if(n)n.focus();},40);
+}
+function submitQ(){
+  if(locked)return;const q=deck[idx];let correct;
+  if(q.kind==="mcq"){if(sel==null)return;correct=(sel===q.answer);}
+  else{const v=($("#numAns").value||"").trim();if(v==="")return;correct=(Number(v)===Number(q.answer));}
+  locked=true;const marks=q.kind==="mcq"?(correct?4:-1):(correct?4:0);myScore+=marks;answers[idx]={correct,marks};
+  if(q.kind==="mcq")[...$("#answers").children].forEach(b=>{const val=b.querySelector("span:last-child").textContent;if(val===q.answer)b.classList.add("correct");else if(val===sel&&!correct)b.classList.add("miss");b.onclick=null;});
+  else $("#numAns").disabled=true;
+  renderDots($("#dots"));
+  const fb=el("div","fb "+(correct?"ok":"no")+" pop");
+  fb.append(el("div","verdict",(correct?"✓ ":"✗ ")+pick(correct?WIN:LOSE)+"<span style='margin-left:auto;font-family:var(--mono);font-size:15px;color:"+(marks>=0?"var(--good)":"var(--bad)")+"'>"+(marks>=0?"+":"")+marks+"</span>"));
+  if(!correct)fb.append(el("div",null,"<div class='tag'>Correct answer</div><div class='ans'>"+q.answer+"</div>"));
+  fb.append(el("div","trap","<span class='tag'>Concept / trap</span><br>"+q.trap));
+  fb.append(el("div","sol",q.sol));
+  $("#fbWrap").appendChild(fb);
+  const btns=$("#qbtns");btns.innerHTML="";const nb=el("button","btn",idx<9?"Next question →":"See my score →");nb.onclick=nextQ;btns.appendChild(nb);
+}
+function nextQ(){if(idx<9){idx++;showQ();window.scrollTo({top:0,behavior:"smooth"});}else finishDaily();}
+function startTimer(){tLeft=720;tickT();timerId=setInterval(tickT,1000);}
+function tickT(){const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);if(tLeft<=0){clearInterval(timerId);finishDaily();}tLeft--;}
+async function finishDaily(){
+  clearInterval(timerId);
+  const right=answers.filter(a=>a&&a.correct).length,acc=Math.round(right/10*100),timeSec=720-Math.max(0,tLeft);
+  let srv={streak:"—",xp:"—",rank:null,percentile:null};
+  try{const r=await api("/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,day:today(),setId:"daily-"+today(),score:myScore,correct:right,total:10,timeSec})});if(r.ok)srv=r;}catch(e){}
+  if(srv.streak!=="—")updateStreakPill(srv.streak);
+  const badges=[];if(right===10)badges.push(["🧹","Clean Sweep"]);if(acc>=80)badges.push(["🎯","Sharpshooter"]);
+  const heavyRight=deck.filter((q,i)=>q.tier.startsWith("Heavy")&&answers[i]&&answers[i].correct).length;if(heavyRight>=2)badges.push(["💀","Killer Instinct"]);
+  if(srv.streak&&srv.streak!=="—")badges.push(["🔥",srv.streak+"-Day Streak"]);
+  const cutPct=64,myPct=Math.min(98,Math.round(acc*0.9+(myScore>0?10:0)));
+  const weeks=myPct>=cutPct?"You're above the line. Stay there.":Math.max(2,Math.ceil((cutPct-myPct)/6))+" weeks at this pace to clear the cutoff.";
+  const rankLine=srv.rank?`#${srv.rank}${srv.of?" of "+srv.of:""} today · `:"";
+  const s=$("#results");s.innerHTML="";
+  s.append(el("div","section-h","<h2>Daily 10 · done</h2><span class='link' id='toBoard'>Leaderboard →</span>"));
+  const c=el("div","card pop");
+  c.innerHTML=`<div class="scorebig tnum">${myScore}<span class="slash"> / 40</span></div><div class="resline">${rankLine}${right}/10 correct · ${acc}% accuracy</div>
+    <div class="rewards"><div class="reward xp"><div class="n tnum">${srv.xp==="—"?"+"+right*20:srv.xp+" XP"}</div><div class="l">${srv.xp==="—"?"XP earned":"total XP"}</div></div><div class="reward st"><div class="n tnum">${srv.streak} ${srv.streak===1?"day":"days"}</div><div class="l">Streak — alive</div></div></div>
+    <div class="badges">${badges.map(b=>`<span class="badge"><span class="e">${b[0]}</span>${b[1]}</span>`).join("")}</div>
+    <div class="aspire"><div class="t"><span>You vs IIM Indore QA cutoff</span><span class="mono">${myPct}%ile</span></div><div class="track"><div class="cut" style="left:${cutPct}%"><b>cutoff</b></div><div class="fillbar" id="fill"></div></div><div class="msg">${weeks}</div></div>`;
+  s.append(c);
+  const c2=el("div","card");c2.style.marginTop="14px";c2.innerHTML=`<div style="font-weight:800;margin-bottom:4px">${right>=8?"Big day. The board's about to feel it.":right>=5?"Solid. Go steal some ranks.":"Rough round — but the streak lives."}</div><div style="color:var(--muted);font-size:14px">Fresh 10 tomorrow. <span class="link" id="toHub" style="cursor:pointer">Back to home →</span></div>`;
+  s.append(c2);
+  show("results");setTimeout(()=>{const f=$("#fill");if(f)f.style.width=myPct+"%";},160);
+  $("#toBoard").onclick=()=>openBoard("daily");$("#toHub").onclick=openHub;
+}
+
+/* ---- PRACTICE TESTS ---- */
+async function openTests(){
+  show("tests");const box=$("#testList");box.innerHTML=`<div class="spin"></div>`;
+  try{const r=await api("/tests");if(!r.ok||!r.tests.length){box.innerHTML=`<div class="empty">No tests yet. JJ can add one from a PDF.</div>`;return;}
+    box.innerHTML="";r.tests.forEach(t=>{const b=el("button","tcard","<span class='ic'>📄</span><span><div class='tt'>"+t.name+"</div><div class='ts'>"+(t.topic||"Mixed")+" · "+t.q_count+" questions</div></span><span class='go'>→</span>");b.onclick=()=>openTest(t.id);box.appendChild(b);});
+  }catch(e){box.innerHTML=`<div class="empty">Couldn't load tests — try again.</div>`;}
+}
+$("#testsBack").onclick=openHub;
+let tp={id:null,name:"",qs:[],i:0,ans:{}};
+async function openTest(id){
+  show("testplay");$("#tpText").innerHTML="";$("#tpAnswers").innerHTML=`<div class="spin"></div>`;$("#tpMeta").innerHTML="";$("#tpBtns").innerHTML="";
+  try{const r=await api("/test?id="+encodeURIComponent(id));if(!r.ok){$("#tpAnswers").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
+    tp={id,name:r.test.name,qs:r.questions,i:0,ans:{}};tpShow();
+  }catch(e){$("#tpAnswers").innerHTML=`<div class="empty">Network error.</div>`;}
+}
+$("#tpQuit").onclick=openTests;
+function tpDots(){const box=$("#tpDots");box.innerHTML="";tp.qs.forEach((q,i)=>{const s=el("i");if(tp.ans[q.id]!=null&&tp.ans[q.id]!=="")s.classList.add("done");else if(i===tp.i)s.classList.add("now");box.appendChild(s);});}
+function tpShow(){
+  const q=tp.qs[tp.i];tpDots();
+  $("#tpMeta").innerHTML="";$("#tpMeta").append(el("span","chip t",q.topic||tp.name),el("span","chip "+tierClass(q.tier||"Exam"),q.tier||"Practice"),el("span","chip n","Q"+(tp.i+1)+" / "+tp.qs.length));
+  $("#tpText").innerHTML=q.stem;const A=$("#tpAnswers");A.innerHTML="";
+  if(q.mode==="open"){A.append(el("div","fb","<div class='tag'>Open / self-check</div><div style='margin-top:6px;color:var(--muted);font-size:14px'>Work it out, then reveal the solution on the results page. Not auto-scored.</div>"));}
+  else if(q.type==="mcq"&&q.options){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");if(tp.ans[q.id]===o)b.classList.add("sel");b.onclick=()=>{tp.ans[q.id]=o;tpShow();};A.appendChild(b);});}
+  else{const w=el("div","numin"),inp=el("input");inp.type="text";inp.value=tp.ans[q.id]||"";inp.placeholder="type your answer";inp.autocomplete="off";inp.oninput=()=>{tp.ans[q.id]=inp.value;};inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&tp.i<tp.qs.length-1)tpNext();});w.appendChild(inp);A.append(w);}
+  const btns=$("#tpBtns");btns.innerHTML="";
+  const row=el("div");row.style.display="flex";row.style.gap="10px";
+  if(tp.i>0){const p=el("button","btn ghost sm","← Prev");p.onclick=()=>{tp.i--;tpShow();};row.appendChild(p);}
+  const n=el("button","btn",tp.i<tp.qs.length-1?"Next →":"Submit test");n.onclick=tp.i<tp.qs.length-1?tpNext:tpSubmit;row.appendChild(n);
+  btns.appendChild(row);
+}
+function tpNext(){tp.i++;tpShow();window.scrollTo({top:0,behavior:"smooth"});}
+async function tpSubmit(){
+  show("testresults");const s=$("#testresults");s.innerHTML=`<div class="spin"></div>`;
+  let g;try{g=await api("/grade",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({testId:tp.id,answers:tp.ans})});}catch(e){s.innerHTML=`<div class="empty">Couldn't grade — try again.</div>`;return;}
+  if(!g.ok){s.innerHTML=`<div class="empty">Grade failed.</div>`;return;}
+  const acc=g.gradeable?Math.round(g.correct/g.gradeable*100):0;
+  s.innerHTML="";s.append(el("div","section-h","<h2>"+tp.name+"</h2><span class='link' id='trBack'>← Tests</span>"));
+  const c=el("div","card pop");c.innerHTML=`<div class="scorebig tnum">${g.score}</div><div class="resline">${g.correct}/${g.gradeable} correct · ${acc}% on auto-graded${g.detail.length>g.gradeable?" · "+(g.detail.length-g.gradeable)+" open (self-check)":""}</div>`;s.append(c);
+  const detailMap={};g.detail.forEach(d=>detailMap[d.id]=d);
+  tp.qs.forEach((q,i)=>{const d=detailMap[q.id]||{};const open=q.mode==="open";
+    const card=el("div","card");card.style.marginTop="10px";
+    const badge=open?`<span class="chip n">self-check</span>`:d.correct?`<span class="chip warm">✓ +4</span>`:(tp.ans[q.id]?`<span class="chip heavy">✗ −1</span>`:`<span class="chip n">skipped</span>`);
+    card.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><b class="mono" style="color:var(--faint)">Q${i+1}</b>${badge}</div>
+      <div style="font-family:var(--disp);font-weight:600;line-height:1.3">${q.stem}</div>
+      ${!open?`<div class="fb" style="margin-top:12px"><div class="tag">Answer</div><div class="ans">${d.answer||"—"}</div>${d.solution?`<div class="sol">${d.solution}</div>`:""}${d.trap?`<div class="trap"><span class="tag">Trap</span><br>${d.trap}</div>`:""}</div>`
+      :`<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700;color:var(--primary)">Reveal solution</summary><div class="fb" style="margin-top:8px"><div class="ans">${d.answer||""}</div><div class="sol">${d.solution||"See method above."}</div></div></details>`}`;
+    s.append(card);});
+  $("#trBack").onclick=openTests;
+}
+
+/* ---- LEADERBOARD ---- */
+const AVC=["#FF4D2E","#2E6BFF","#FF9F1C","#7C5CFF","#08C08A","#FF3D8B","#08B981","#B14BFF"];
+async function openBoard(type){
+  show("board");[...$("#tabs").children].forEach(t=>t.classList.toggle("on",t.dataset.t===type));
+  const box=$("#rows");box.innerHTML=`<div class="spin"></div>`;
+  const subs={daily:"Same 10 for everyone — fair by design.",accuracy:"Ranked by % correct — climbers welcome.",streak:"Longest active streak wins.",batch:"Batch average — carry your squad."};
+  $("#leagueSub").textContent=subs[type]||"";
+  try{const r=await api("/leaderboard?type="+type+"&day="+today()+"&pin="+encodeURIComponent(ME.pin));
+    if(!r.ok||!r.rows.length){box.innerHTML=`<div class="empty">No scores yet today.<br>Be the first — play the Daily 10.</div>`;return;}
+    box.innerHTML="";r.rows.forEach((p,i)=>{const you=p.name===ME.name||(type==="batch"&&p.batch===ME.batch);
+      const rw=el("div","row"+(you?" you":"")+(i<3?" top3":""));
+      rw.innerHTML=`<span class="rk tnum">${i+1}</span><span class="av" style="background:${you?"#1A1330":AVC[i%AVC.length]}">${(p.name||"?")[0]}</span><span class="who"><div class="n">${p.name}${i===0?" 👑":""}${you?" · you":""}</div><div class="bt">${p.batch||""}</div></span><span class="sc tnum">${type==="accuracy"?p.score+"%":p.score}</span>`;
+      box.appendChild(rw);});
+  }catch(e){box.innerHTML=`<div class="empty">Couldn't load the board.</div>`;}
+}
+$("#boardBack").onclick=openHub;
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)openBoard(b.dataset.t);});
+
+/* ---- boot ---- */
+loadSession();
+if(ME&&ME.pin)openHub(); else show("login");
+</script></body></html>

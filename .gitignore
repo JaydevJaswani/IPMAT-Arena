@@ -1,0 +1,11 @@
+# Student PII — NEVER commit
+build/
+*.xlsx
+*.csv
+roster.json
+roster.sql
+pin_conflicts.txt
+.dev.vars
+node_modules/
+.wrangler/
+.DS_Store

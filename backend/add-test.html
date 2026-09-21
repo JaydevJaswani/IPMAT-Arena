@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPMAT Arena — Add a Test from PDF</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--ink:#1a1526;--bg:#faf7ff;--line:#e7e1ef;--muted:#6b6280;--primary:#ff4d2e;--good:#08b981;--bad:#f4335f;--amber:#ff9f1c}
+*{box-sizing:border-box}body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:680px;margin:0 auto;padding:26px 18px 60px}
+h1{font-size:24px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin:0 0 6px}
+input[type=text],input[type=password]{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px;margin-bottom:12px}
+.two{display:flex;gap:12px}.two>div{flex:1}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.on{border-color:var(--primary);background:#fff5f2}
+button{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:13px 18px;font-weight:700;font-size:15px;cursor:pointer;width:100%}
+button:disabled{opacity:.5;cursor:not-allowed}
+.q{border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin:8px 0;font-size:14px}
+.q .n{font-weight:800;color:var(--primary)}.q .o{color:var(--muted);font-size:13px}.q .a{color:var(--good);font-weight:700;font-size:13px;margin-top:4px}
+.q.warn{border-color:var(--amber);background:#fff9f0}.q.warn .a{color:var(--amber)}
+.stat{font-size:30px;font-weight:800}.ok{color:var(--good)}.err{color:var(--bad)}
+details summary{cursor:pointer;font-weight:700;color:var(--muted);font-size:13px}
+pre{white-space:pre-wrap;font-size:12px;background:#f6f2fb;border-radius:8px;padding:10px;max-height:220px;overflow:auto}
+.mini{font-size:12.5px;color:var(--muted)}
+</style></head><body><div class="wrap">
+<h1>🔥 Add a Test from PDF</h1>
+<p class="sub">Drop a question PDF, give it a name, publish it as a playable test. Parses in your browser.</p>
+
+<div class="card">
+  <div class="two"><div><label>Test name</label><input id="name" type="text" placeholder="e.g. Number System — Sprint 3"></div>
+  <div><label>Topic</label><input id="topic" type="text" placeholder="e.g. Number System"></div></div>
+  <div class="two"><div><label>Worker URL</label><input id="api" type="text" placeholder="https://ipmat-arena.xxx.workers.dev"></div>
+  <div><label>Admin key</label><input id="key" type="password" placeholder="ADMIN_KEY"></div></div>
+</div>
+
+<div class="card">
+  <div id="drop" class="drop">📄 Drop the question PDF here, or click to choose</div>
+  <input id="file" type="file" accept=".pdf" hidden>
+  <details style="margin-top:12px"><summary>Expected format (tolerant — edit your PDF to match if parsing misses)</summary>
+  <pre>Q1. A number written twice (e.g. 4747) — largest divisor?
+(A) 99  (B) 101  (C) 1001  (D) 11
+Ans: B
+Sol: abab = ab×101, so 101 always divides it.
+
+Q2. How many integers 1–200 are divisible by neither 4 nor 6?
+Ans: 133
+Sol: 200 − (50+33−16) = 133.</pre>
+  <div class="mini">• Questions start with <b>Q1.</b> or <b>1.</b> &nbsp; • Options optional: <b>(A) …</b> &nbsp; • <b>Ans:</b> a letter (MCQ) or a number &nbsp; • <b>Sol:</b> optional.</div>
+  </details>
+</div>
+
+<div id="previewWrap" class="card" hidden>
+  <div id="summary"></div>
+  <div id="preview" style="margin-top:10px"></div>
+</div>
+
+<button id="send" disabled>Publish test</button>
+<div id="result" style="margin-top:14px"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let parsed=[];
+
+async function pdfToText(buf){
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise; let out="";
+  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();
+    let last=null,line="";
+    tc.items.forEach(it=>{const y=it.transform[5];if(last!==null&&Math.abs(y-last)>3){out+=line.trim()+"\n";line="";}line+=it.str+" ";last=y;});
+    out+=line.trim()+"\n\n";}
+  return out;
+}
+function parse(text){
+  const blocks=text.split(/\n(?=\s*(?:Q\s*\d+[.).]|\d+[.)])\s)/i).map(b=>b.trim()).filter(Boolean);
+  const qs=[];
+  blocks.forEach(b=>{
+    if(!/^\s*(Q\s*\d+|\d+)[.)]/i.test(b)) return;
+    const lines=b.split(/\n/).map(l=>l.trim()).filter(Boolean);
+    let stem=[],options=[],ans=null,sol=[],inSol=false;
+    lines.forEach(l=>{
+      let m;
+      if(m=l.match(/^(?:Ans(?:wer)?)\s*[:.\-]\s*(.+)/i)){ans=m[1].trim();inSol=false;return;}
+      if(m=l.match(/^(?:Sol(?:ution)?)\s*[:.\-]\s*(.*)/i)){inSol=true;if(m[1])sol.push(m[1]);return;}
+      if(inSol){sol.push(l);return;}
+      const om=l.match(/^\(?([A-Da-d])[).]\s*(.+)/);
+      if(om && options.length<4){options.push({k:om[1].toUpperCase(),v:om[2].trim()});return;}
+      stem.push(l.replace(/^\s*(?:Q\s*\d+|\d+)[.)]\s*/i,""));
+    });
+    if(!stem.length) return;
+    let type="int",answer=ans||"",display=ans||"",opts=null,mode="auto";
+    if(options.length>=2){
+      type="mcq";opts=options.map(o=>o.v);
+      if(ans && /^[A-Da-d]$/.test(ans.trim())){const hit=options.find(o=>o.k===ans.trim().toUpperCase());if(hit){answer=hit.v;display=hit.v;}}
+    } else if(ans && !/^-?\d+(\.\d+)?$/.test(ans.replace(/\s/g,''))){ type="short"; }
+    if(!ans) mode="open";
+    qs.push({stem:stem.join(" "),type,mode,options:opts,answer,answer_display:display,solution:sol.join(" "),tier:"Exam-Relevant"});
+  });
+  return qs;
+}
+function render(){
+  const good=parsed.filter(q=>q.mode==="auto").length;
+  $("#previewWrap").hidden=false;
+  $("#summary").innerHTML=`<span class="stat ok">${parsed.length}</span> <span class="mini">questions parsed · ${good} auto-gradeable · ${parsed.length-good} need an answer (flagged)</span>`;
+  $("#preview").innerHTML=parsed.slice(0,8).map((q,i)=>`<div class="q ${q.mode==='open'?'warn':''}"><span class="n">Q${i+1}.</span> ${q.stem.slice(0,150)}${q.options?`<div class="o">${q.options.map((o,j)=>String.fromCharCode(65+j)+') '+o).join(' &nbsp; ')}</div>`:''}<div class="a">${q.answer?('Ans: '+q.answer_display):'⚠ no answer found — add "Ans:" in the PDF'}</div></div>`).join("")+(parsed.length>8?`<div class="mini">…and ${parsed.length-8} more</div>`:"");
+  $("#send").disabled=parsed.length===0;
+}
+function readFile(f){const rd=new FileReader();rd.onload=async e=>{try{const txt=await pdfToText(new Uint8Array(e.target.result));parsed=parse(txt);render();}catch(err){$("#result").innerHTML='<span class="err">✗ Could not read PDF: '+err.message+'</span>';}};rd.readAsArrayBuffer(f);}
+$("#drop").onclick=()=>$("#file").click();
+$("#file").onchange=e=>e.target.files[0]&&readFile(e.target.files[0]);
+["dragover","dragenter"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.add("on");}));
+["dragleave","drop"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.remove("on");}));
+$("#drop").addEventListener("drop",e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
+$("#send").onclick=async()=>{
+  const api=$("#api").value.trim().replace(/\/$/,''),key=$("#key").value.trim(),name=$("#name").value.trim(),topic=$("#topic").value.trim();
+  if(!api||!key||!name){$("#result").innerHTML='<span class="err">Fill in test name, Worker URL and admin key.</span>';return;}
+  $("#send").disabled=true;$("#result").textContent="Publishing…";
+  try{const r=await fetch(api+"/admin/upload-test",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Key":key},body:JSON.stringify({name,topic,questions:parsed})});
+    const j=await r.json();
+    $("#result").innerHTML=j.ok?`<span class="ok">✓ Published "${name}" — ${j.inserted} questions live (id: ${j.testId}).</span>`:`<span class="err">✗ ${j.error||'failed'}</span>`;
+  }catch(e){$("#result").innerHTML='<span class="err">✗ '+e.message+'</span>';}
+  $("#send").disabled=false;
+};
+</script></body></html>

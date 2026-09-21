@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPMAT Arena — Roster Upload</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--ink:#1a1526;--bg:#fff;--line:#e7e1ef;--muted:#6b6280;--primary:#ff5a3c;--good:#10b981;--bad:#ef4444}
+*{box-sizing:border-box}body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#faf7ff;color:var(--ink);line-height:1.5}
+.wrap{max-width:620px;margin:0 auto;padding:28px 18px}
+h1{font-size:24px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:6px}
+input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;font-size:15px;margin-bottom:14px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.on{border-color:var(--primary);background:#fff5f2}
+.row{display:flex;gap:8px;align-items:center;margin:10px 0}
+button{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:13px 18px;font-weight:700;font-size:15px;cursor:pointer;width:100%}
+button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.stat{font-size:34px;font-weight:800}.ok{color:var(--good)}.err{color:var(--bad)}
+pre{background:#f6f2fb;border-radius:9px;padding:12px;font-size:12px;overflow:auto;max-height:200px}
+.mini{font-size:13px;color:var(--muted)}
+</style></head><body><div class="wrap">
+<h1>🔥 IPMAT Arena · Roster Upload</h1>
+<p class="sub">Upload the latest masterdata whenever new students enrol. Cleans in your browser, then replaces who can log in.</p>
+
+<div class="card">
+  <label>Worker URL</label><input id="api" type="text" placeholder="https://ipmat-arena.xxx.workers.dev">
+  <label>Admin key</label><input id="key" type="password" placeholder="ADMIN_KEY">
+  <div class="row"><input id="mgmt" type="checkbox" style="width:auto"><span class="mini">Roster = A-series + Zebar (566). Tick only if <b>26/27-MGMT + E-batches</b> should also log in.</span></div>
+</div>
+
+<div class="card">
+  <div id="drop" class="drop">📄 Drop the masterdata .xlsx here, or click to choose</div>
+  <input id="file" type="file" accept=".xlsx,.xls" hidden>
+  <div id="preview"></div>
+</div>
+
+<button id="send" disabled>Replace roster on the server</button>
+<div id="result" style="margin-top:14px"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+let clean=[];
+const AHMEDABAD=[/^A-?\d{3,4}$/,/^A27-[A-Z]$/,/^Z\d{3,4}$/,/^S\d{3,4}$/,/^PN\d{3,4}$/,/^ZEBAR$/];
+const MGMT=[/^26\s*MGMT/,/^27\s*MGMT/,/^IPM\s*27/];
+const norm=v=>(v==null?"":String(v).replace(/\s+/g," ").trim().toUpperCase());
+function keepBatch(b){const x=b.toLowerCase();if(/law|clat|gdpi|ug/.test(x))return false;
+  if(AHMEDABAD.some(r=>r.test(b)))return true;
+  if($("#mgmt").checked&&MGMT.some(r=>r.test(b)))return true;return false;}
+
+function process(rows){
+  const seen={};clean=[];let active=0,ipm=0,dropped=0,conf=0;
+  rows.forEach(r=>{
+    const g=k=>{for(const key in r)if(key.trim().toLowerCase()===k)return r[key];return undefined;};
+    const status=String(g('status')||'').trim().toLowerCase();
+    const variant=String(g('variant')||'').toLowerCase();
+    const pin=String(g('ims pin')||'').trim().toUpperCase();
+    const name=((String(g('first name')||'').trim())+' '+(String(g('last name')||'').trim())).trim().replace(/\bnan\b/g,'').trim();
+    const batch=norm(g('current batch'));
+    if(status!=='active')return;active++;
+    if(!variant.includes('ipm')||/law|clat|gdpi|ug2/.test(variant))return;ipm++;
+    if(pin.length<6||!name||!batch){dropped++;return;}
+    if(!keepBatch(batch)){dropped++;return;}
+    if(seen[pin]){if(seen[pin].toLowerCase()!==name.toLowerCase())conf++;return;}
+    seen[pin]=name;clean.push({pin,name,batch});
+  });
+  const byBatch={};clean.forEach(s=>byBatch[s.batch]=(byBatch[s.batch]||0)+1);
+  $("#preview").innerHTML=`<div class="stat ok">${clean.length}</div><div class="mini">students will be able to log in · ${Object.keys(byBatch).length} batches · ${active} active scanned · ${dropped} dropped · ${conf} PIN conflict(s)</div>`;
+  $("#send").disabled=clean.length===0;
+}
+function readFile(f){const rd=new FileReader();rd.onload=e=>{const wb=XLSX.read(e.target.result,{type:'array'});
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});process(rows);};rd.readAsArrayBuffer(f);}
+$("#drop").onclick=()=>$("#file").click();
+$("#file").onchange=e=>e.target.files[0]&&readFile(e.target.files[0]);
+["dragover","dragenter"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.add("on");}));
+["dragleave","drop"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.remove("on");}));
+$("#drop").addEventListener("drop",e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
+$("#mgmt").onchange=()=>{if($("#file").files[0])readFile($("#file").files[0]);};
+$("#send").onclick=async()=>{
+  const api=$("#api").value.trim().replace(/\/$/,''),key=$("#key").value.trim();
+  if(!api||!key){$("#result").innerHTML='<span class="err">Enter Worker URL + admin key.</span>';return;}
+  $("#send").disabled=true;$("#result").textContent="Uploading…";
+  try{const r=await fetch(api+"/admin/upload-roster",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Key":key},body:JSON.stringify({students:clean})});
+    const j=await r.json();
+    $("#result").innerHTML=j.ok?`<span class="ok">✓ Roster replaced — ${j.inserted} students can now log in.</span>`:`<span class="err">✗ ${j.error||'failed'}</span>`;
+  }catch(e){$("#result").innerHTML='<span class="err">✗ '+e.message+'</span>';}
+  $("#send").disabled=false;
+};
+</script></body></html>
