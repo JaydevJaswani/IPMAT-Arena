@@ -9,3 +9,6 @@ pin_conflicts.txt
 node_modules/
 .wrangler/
 .DS_Store
+
+# Question source data contains answers — keep out of public repo
+data/*.json
