@@ -209,7 +209,7 @@ const TCANON={"Linear Equations":"Linear & Quadratic Equations","Number Theory":
 G.forEach(g=>{g.topic=TCANON[g.topic]||g.topic;});
 const TIERLVL={"Warm-Up":"L1","Exam-Relevant":"L2","Heavy & Tricky":"L3","Killer":"L4"};
 const LVLTIER={L1:"Warm-Up",L2:"Exam-Relevant",L3:"Heavy & Tricky",L4:"Killer"};
-const LVLNAME={L1:"Easy",L2:"Med",L3:"Hard",L4:"Killer"};
+const LVLNAME={L1:"Easy",L2:"Med",L3:"Hard"};
 const genCov=new Set();G.forEach(g=>genCov.add(g.topic+"|"+TIERLVL[g.tier]));
 const genByTL=(t,l)=>G.filter(g=>g.topic===t&&TIERLVL[g.tier]===l);
 const SYLLABUS=[
@@ -218,7 +218,7 @@ const SYLLABUS=[
  ["Geometry & Mensuration",["Triangles & Polygons","Circles","Coordinate Geometry","Mensuration","Trigonometry"]],
  ["Modern Math",["Permutations & Combinations","Probability","Set Theory & Venn","Matrices & Determinants"]],
  ["Data Interpretation",["Data Interpretation"]]];
-let CAMPAIGN={thr:{L1:5,L2:6,L3:7,L4:8},solved:{},poolCov:new Set()};
+let CAMPAIGN={thr:{L1:10,L2:10,L3:10},solved:{},poolCov:new Set()};
 /* report issue */
 let currentQ=null;
 const setReportCtx=(qkey,source,stem)=>{currentQ={qkey,source,stem};};
@@ -249,7 +249,7 @@ async function openHub(){
   show("hub");const h=$("#hub");
   h.innerHTML=`<div class="hero"><div class="eyebrow">Welcome back</div><h1>${ME.name.split(" ")[0]}.</h1><p class="sub">Batch ${ME.batch} · Gold League.</p>
     <div class="coachrow"><span class="av">${AV_GURU}</span><div class="msg"><b>Coach WarGuru:</b> ${pick(COACH)}</div></div></div>
-    <div class="statrow"><div class="stat c1"><div class="n tnum" id="hRank">—</div><div class="l">Today's rank</div></div><div class="stat c2"><div class="n tnum" id="hStreak">—</div><div class="l">Day streak</div></div><div class="stat c3"><div class="n tnum" id="hXp">—</div><div class="l">XP</div></div></div>
+    <div class="statrow"><div class="stat c1"><div class="n tnum" id="hRank">—</div><div class="l">Today's rank</div></div><div class="stat c2"><div class="n tnum" id="hSolved">—</div><div class="l">Solved</div></div><div class="stat c3"><div class="n tnum" id="hAcc">—</div><div class="l">Accuracy</div></div></div>
     <div class="score2"><div class="bigstat cp"><div class="h">⚔️ Conquest Points</div><div class="v tnum" id="hCP">—</div><div class="subv" id="hCPsub">solving score · harder = more</div></div>
       <div class="bigstat cb"><div class="h">↺ Comeback Index</div><div class="v tnum" id="hCB">—</div><div class="subv" id="hCBsub">mistakes reconquered</div></div></div>
     <div class="tiles">
@@ -264,7 +264,7 @@ async function openHub(){
   $("#tDaily").onclick=startDaily;$("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");
   updateStreakPill(0);
   try{const m=await api("/me?pin="+encodeURIComponent(ME.pin));if(m.ok){
-    $("#hStreak").textContent=m.streak;$("#hXp").textContent=m.xp;updateStreakPill(m.streak);
+    $("#hSolved").textContent=m.solved;$("#hAcc").textContent=m.seen?Math.round(m.solved/m.seen*100)+"%":"—";updateStreakPill(m.streak);
     $("#hCP").textContent=m.conquest;$("#hCPsub").textContent=m.solved+" solved of "+m.seen+" seen";
     const cb=m.comeback;$("#hCB").textContent=cb.total?cb.resolved+"/"+cb.total:"0";
     $("#hCBsub").innerHTML=cb.total?`${cb.redos} extra solves · batch avg ${cb.peerAvg}${cb.redos>cb.peerAvg?' · <b style="color:var(--good)">ahead</b>':''}`:"no misses yet — nice";
@@ -294,7 +294,7 @@ function openConquest(){show("conquest");const s=$("#conquest");
 async function loadCampaign(){
   const box=$("#mapWrap");
   let d;try{d=await api("/campaign?pin="+encodeURIComponent(ME.pin));}catch(e){box.innerHTML=`<div class="empty">Map unavailable.</div>`;return;}
-  const thr=d.thresholds||{L1:5,L2:6,L3:7,L4:8},solved={},poolCov=new Set();
+  const thr=d.thresholds||{L1:10,L2:10,L3:10},solved={},poolCov=new Set();
   (d.progress||[]).forEach(r=>solved[r.topic+"|"+TIERLVL[r.tier]]=r.solved);
   (d.pool||[]).forEach(r=>poolCov.add(r.topic+"|"+TIERLVL[r.tier]));
   CAMPAIGN={thr,solved,poolCov};
@@ -303,7 +303,7 @@ async function loadCampaign(){
     html+=`<div class="fam">${fam}</div>`;
     topics.forEach(tp=>{
       let chainOK=true;
-      const cells=["L1","L2","L3","L4"].map(L=>{
+      const cells=["L1","L2","L3"].map(L=>{
         const has=genCov.has(tp+"|"+L)||poolCov.has(tp+"|"+L);
         const sv=solved[tp+"|"+L]||0,tgt=thr[L],cleared=has&&sv>=tgt;
         let state;
@@ -373,7 +373,7 @@ async function pCheck(){
   PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;if(correct)PS.solved++;pRender();
 }
 function pCleared(){
-  const s=$("#practice"),nextL={L1:"L2",L2:"L3",L3:"L4",L4:null}[PS.level];
+  const s=$("#practice"),nextL={L1:"L2",L2:"L3",L3:null}[PS.level];
   const nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL));
   CAMPAIGN.solved[PS.topic+"|"+PS.level]=PS.solved;
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level cleared</h2><span class="link" id="pHome">← Map</span></div>
@@ -431,9 +431,10 @@ async function finishDaily(){clearInterval(timerId);
   if(srv.streak&&srv.streak!=="—")badges.push(["🔥",srv.streak+"-Day Streak"]);
   const cutPct=64,myPct=Math.min(98,Math.round(acc*0.9+(myScore>0?10:0))),weeks=myPct>=cutPct?"You're above the line. Stay there.":Math.max(2,Math.ceil((cutPct-myPct)/6))+" weeks at this pace to clear the cutoff.";
   const rankLine=srv.rank?`#${srv.rank}${srv.of?" of "+srv.of:""} today · `:"";
+  const cpGain=deck.reduce((sm,q,i)=>sm+((dAns[i]&&dAns[i].correct)?(TW[q.tier]||1):0),0);
   const s=$("#results");s.innerHTML="";s.append(el("div","section-h","<h2>Daily 10 · done</h2><span class='link' id='toBoard'>Leaderboard →</span>"));
   const c=el("div","card pop");c.innerHTML=`<div class="scorebig tnum">${myScore}<span class="slash"> / 40</span></div><div class="resline">${rankLine}${right}/10 correct · ${acc}%</div>
-    <div class="rewards"><div class="reward xp"><div class="n tnum">${srv.xp==="—"?"+"+right*20:srv.xp+" XP"}</div><div class="l">${srv.xp==="—"?"XP":"total XP"}</div></div><div class="reward st"><div class="n tnum">${srv.streak} ${srv.streak===1?"day":"days"}</div><div class="l">Streak</div></div></div>
+    <div class="rewards"><div class="reward xp"><div class="n tnum">+${cpGain}</div><div class="l">Conquest pts</div></div><div class="reward st"><div class="n tnum">${srv.streak} ${srv.streak===1?"day":"days"}</div><div class="l">Streak</div></div></div>
     <div class="badges">${badges.map(b=>`<span class="badge"><span class="e">${b[0]}</span>${b[1]}</span>`).join("")}</div>
     <div class="aspire"><div class="t"><span>You vs IIM Indore QA cutoff</span><span class="mono">${myPct}%ile</span></div><div class="track"><div class="cut" style="left:${cutPct}%"><b>cutoff</b></div><div class="fillbar" id="fill"></div></div><div class="msg">${weeks}</div></div>`;
   s.append(c);

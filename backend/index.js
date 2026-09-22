@@ -265,7 +265,7 @@ async function redo(req, env) {
 
 // ---- campaign / practice ----
 const LVL_TIER = { L1: "Warm-Up", L2: "Exam-Relevant", L3: "Heavy & Tricky", L4: "Killer" };
-const CLEAR = { L1: 5, L2: 6, L3: 7, L4: 8 };  // correct-answers threshold per level
+const CLEAR = { L1: 10, L2: 10, L3: 10 };  // correct-answers threshold per level (no Killer)
 
 async function practice(url, env) {
   const topic = url.searchParams.get("topic"), level = url.searchParams.get("level");
