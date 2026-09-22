@@ -37,6 +37,10 @@ export default {
       if (p === "/tests")                return listTests(env);
       if (p === "/test")                 return getTest(url, env);
       if (p === "/grade")                return grade(req, env);
+      if (p === "/test-status")          return testStatus(url, env);
+      if (p === "/review")               return review(url, env);
+      if (p === "/extra")                return extra(url, env);
+      if (p === "/redo")                 return redo(req, env);
       if (p === "/admin/upload-roster")  return uploadRoster(req, env);
       if (p === "/admin/upload-test")    return uploadTest(req, env);
       if (p === "/admin/roster-count")   return rosterCount(req, env);
@@ -58,6 +62,10 @@ async function login(req, env) {
   return json({ ok: true, name: row.name, batch: row.batch });
 }
 
+const qlogStmt = (env) => env.DB.prepare(
+  "INSERT INTO q_log (pin,topic,tier,qkey,source,correct,is_redo) VALUES (?,?,?,?,?,?,?)");
+const tierWeightSQL = "(CASE tier WHEN 'Warm-Up' THEN 1 WHEN 'Exam-Relevant' THEN 2 ELSE 3 END)";
+
 async function me(url, env) {
   const pin = cleanPin(url.searchParams.get("pin"));
   const stu = await env.DB.prepare("SELECT name, batch FROM students WHERE pin=?").bind(pin).first();
@@ -65,9 +73,21 @@ async function me(url, env) {
   const pr = await env.DB.prepare("SELECT xp,current_streak,best_streak,last_day FROM progress WHERE pin=?").bind(pin).first();
   const day = new Date().toISOString().slice(0, 10);
   const done = await env.DB.prepare("SELECT 1 FROM attempts WHERE pin=? AND set_id=?").bind(pin, "daily-" + day).first();
+  // topic × level tally
+  const mastery = (await env.DB.prepare(
+    "SELECT topic,tier,COUNT(*) seen,COALESCE(SUM(correct),0) solved FROM q_log WHERE pin=? GROUP BY topic,tier").bind(pin).all()).results;
+  const cp = await env.DB.prepare(
+    `SELECT COALESCE(SUM(CASE WHEN correct=1 THEN ${tierWeightSQL} ELSE 0 END),0) cp,
+     COUNT(*) seen, COALESCE(SUM(correct),0) solved FROM q_log WHERE pin=?`).bind(pin).first();
+  // Comeback Index
+  const w = await env.DB.prepare("SELECT COUNT(*) total, COALESCE(SUM(resolved),0) resolved FROM wrongs WHERE pin=?").bind(pin).first();
+  const myRedos = (await env.DB.prepare("SELECT COUNT(*) n FROM q_log WHERE pin=? AND is_redo=1").bind(pin).first()).n;
+  const peer = (await env.DB.prepare("SELECT COALESCE(AVG(c),0) avg FROM (SELECT COUNT(*) c FROM q_log WHERE is_redo=1 GROUP BY pin)").first()).avg;
   return json({ ok: true, name: stu.name, batch: stu.batch,
-    xp: pr ? pr.xp : 0, streak: pr ? pr.current_streak : 0, best: pr ? pr.best_streak : 0,
-    dailyDone: !!done });
+    xp: pr ? pr.xp : 0, streak: pr ? pr.current_streak : 0, best: pr ? pr.best_streak : 0, dailyDone: !!done,
+    conquest: cp.cp || 0, seen: cp.seen || 0, solved: cp.solved || 0, mastery,
+    comeback: { resolved: w.resolved || 0, total: w.total || 0, open: (w.total || 0) - (w.resolved || 0),
+      redos: myRedos, peerAvg: Math.round((peer || 0) * 10) / 10 } });
 }
 
 async function submit(req, env) {
@@ -79,11 +99,24 @@ async function submit(req, env) {
   const day = b.day, setId = b.setId || ("daily-" + day);
   const { score, correct, total, timeSec } = b;
 
-  // one scored attempt per set (ignore replays)
+  // fresh attempt? (only log per-question data once per set)
+  const prior = await env.DB.prepare("SELECT 1 FROM attempts WHERE pin=? AND set_id=?").bind(pin, setId).first();
   await env.DB.prepare(
     `INSERT INTO attempts (pin,set_id,day,score,correct,total,time_sec)
      VALUES (?,?,?,?,?,?,?) ON CONFLICT(pin,set_id) DO NOTHING`
   ).bind(pin, setId, day, score, correct, total, timeSec).run();
+
+  if (!prior && Array.isArray(b.items)) {
+    const logs = b.items.map(it => qlogStmt(env).bind(pin, it.topic || "", it.tier || "", "g:" + (it.genId || ""), "daily", it.correct ? 1 : 0, 0));
+    if (logs.length) await env.DB.batch(logs);
+    for (const it of b.items) {
+      if (!it.genId) continue;
+      if (it.correct) await env.DB.prepare("UPDATE wrongs SET resolved=1 WHERE pin=? AND gen_id=? AND resolved=0").bind(pin, it.genId).run();
+      else await env.DB.prepare(
+        "INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,?,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1, resolved=0"
+      ).bind(pin, "g:" + it.genId, it.topic || "", it.tier || "", it.genId).run();
+    }
+  }
 
   // streak + xp
   const prog = await env.DB.prepare("SELECT * FROM progress WHERE pin = ?").bind(pin).first();
@@ -155,9 +188,11 @@ async function getTest(url, env) {
 }
 const normAns = (s) => String(s == null ? "" : s).toLowerCase().replace(/\s+/g, "").replace(/[·×]/g, "*");
 async function grade(req, env) {
-  const { testId, answers } = await req.json();           // answers: { qId: given }
+  const { testId, answers, pin } = await req.json();       // answers: { qId: given }
+  const cpin = cleanPin(pin);
+  const alreadyDone = cpin ? await env.DB.prepare("SELECT 1 FROM test_done WHERE pin=? AND test_id=?").bind(cpin, testId).first() : null;
   const qs = (await env.DB.prepare(
-    "SELECT id,type,mode,answer,answer_display,solution,trap FROM questions WHERE test_id=?").bind(testId).all()).results;
+    "SELECT id,seq,topic,tier,type,mode,answer,answer_display,solution,trap FROM questions WHERE test_id=?").bind(testId).all()).results;
   let score = 0, correct = 0, gradeable = 0;
   const detail = qs.map(q => {
     const given = answers ? answers[q.id] : undefined;
@@ -167,9 +202,59 @@ async function grade(req, env) {
       ok = q.type === "int" ? Number(given) === Number(q.answer) : normAns(given) === normAns(q.answer);
       if (ok) { correct++; score += 4; } else { score -= 1; }
     }
-    return { id: q.id, correct: ok, answer: q.answer_display || q.answer, solution: q.solution, trap: q.trap };
+    return { id: q.id, seq: q.seq, topic: q.topic, tier: q.tier, correct: ok, answer: q.answer_display || q.answer, solution: q.solution, trap: q.trap };
   });
-  return json({ ok: true, score, correct, gradeable, detail });
+  // log once — first time this student finishes this test
+  if (cpin && !alreadyDone) {
+    const logs = detail.filter(d => d.correct !== null).map(d =>
+      qlogStmt(env).bind(cpin, d.topic || "", d.tier || "", testId + ":" + d.seq, "test", d.correct ? 1 : 0, 0));
+    if (logs.length) await env.DB.batch(logs);
+    for (const d of detail) {
+      if (d.correct === false) await env.DB.prepare(
+        "INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,NULL,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1, resolved=0"
+      ).bind(cpin, testId + ":" + d.seq, d.topic || "", d.tier || "").run();
+    }
+    await env.DB.prepare("INSERT OR IGNORE INTO test_done (pin,test_id,score,correct,total) VALUES (?,?,?,?,?)")
+      .bind(cpin, testId, score, correct, gradeable).run();
+  }
+  return json({ ok: true, score, correct, gradeable, detail, alreadyDone: !!alreadyDone });
+}
+
+async function testStatus(url, env) {
+  const pin = cleanPin(url.searchParams.get("pin"));
+  const r = (await env.DB.prepare("SELECT test_id,score,correct,total FROM test_done WHERE pin=?").bind(pin).all()).results;
+  return json({ ok: true, done: r });
+}
+async function review(url, env) {
+  const pin = cleanPin(url.searchParams.get("pin")), id = url.searchParams.get("testId");
+  const t = await env.DB.prepare("SELECT id,name,topic FROM tests WHERE id=?").bind(id).first();
+  const qs = (await env.DB.prepare(
+    "SELECT id,seq,topic,tier,type,mode,stem,options,answer_display,solution,trap FROM questions WHERE test_id=? ORDER BY seq").bind(id).all()).results;
+  const logs = (await env.DB.prepare("SELECT qkey,correct FROM q_log WHERE pin=? AND source='test' AND qkey LIKE ?").bind(pin, id + ":%").all()).results;
+  const lm = {}; logs.forEach(l => lm[l.qkey] = l.correct);
+  return json({ ok: true, test: t, questions: qs.map(q => ({ ...q, options: q.options ? JSON.parse(q.options) : null,
+    correct: (id + ":" + q.seq) in lm ? !!lm[id + ":" + q.seq] : null })) });
+}
+async function extra(url, env) {
+  const pin = cleanPin(url.searchParams.get("pin"));
+  const r = (await env.DB.prepare(
+    "SELECT qkey,topic,tier,gen_id,misses FROM wrongs WHERE pin=? AND resolved=0 ORDER BY misses DESC, rowid DESC LIMIT 20").bind(pin).all()).results;
+  return json({ ok: true, wrongs: r });
+}
+async function redo(req, env) {
+  const { pin, items } = await req.json();
+  const cpin = cleanPin(pin);
+  if (!Array.isArray(items) || !items.length) return json({ ok: false, error: "no items" }, 400);
+  const logs = items.map(it => qlogStmt(env).bind(cpin, it.topic || "", it.tier || "", it.qkey || ("g:" + (it.genId || "")), "extra", it.correct ? 1 : 0, 1));
+  await env.DB.batch(logs);
+  let resolved = 0;
+  for (const it of items) {
+    if (it.correct && it.qkey) {
+      const r = await env.DB.prepare("UPDATE wrongs SET resolved=1 WHERE pin=? AND qkey=? AND resolved=0").bind(cpin, it.qkey).run();
+      resolved += (r.meta && r.meta.changes) || 0;
+    }
+  }
+  return json({ ok: true, resolved });
 }
 
 // ---- admin ----

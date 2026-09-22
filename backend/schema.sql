@@ -59,12 +59,31 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 CREATE INDEX IF NOT EXISTS idx_q_test ON questions(test_id, seq);
 
--- Wrong questions to resurface with NEW numbers (revenge). Stores the template id,
--- not the exact instance — the client re-rolls the template on review.
-CREATE TABLE IF NOT EXISTS revenge (
-  pin         TEXT NOT NULL,
-  template_id TEXT NOT NULL,
-  due_day     TEXT NOT NULL,        -- spaced-repetition next-due date
-  misses      INTEGER NOT NULL DEFAULT 1,
-  PRIMARY KEY (pin, template_id)
+-- Per-question attempt log — powers the topic×level tally, Conquest Points, Comeback Index.
+CREATE TABLE IF NOT EXISTS q_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pin TEXT NOT NULL, topic TEXT, tier TEXT,
+  qkey TEXT,                       -- 'g:<genId>' (templated) or '<testId>:<seq>' (static)
+  source TEXT,                     -- 'daily' | 'test' | 'extra'
+  correct INTEGER NOT NULL,
+  is_redo INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_qlog_pin ON q_log(pin);
+
+-- Still-unmastered wrong questions -> Extra Practice (re-served with new numbers).
+CREATE TABLE IF NOT EXISTS wrongs (
+  pin TEXT NOT NULL, qkey TEXT NOT NULL, topic TEXT, tier TEXT,
+  gen_id TEXT,                     -- templated generator to reroll (NULL for static)
+  misses INTEGER NOT NULL DEFAULT 1,
+  resolved INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (pin, qkey)
+);
+
+-- Test completions — a test is taken once, then review-only.
+CREATE TABLE IF NOT EXISTS test_done (
+  pin TEXT NOT NULL, test_id TEXT NOT NULL,
+  score INTEGER, correct INTEGER, total INTEGER,
+  done_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (pin, test_id)
 );
