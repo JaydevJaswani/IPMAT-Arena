@@ -21,7 +21,7 @@ h1,h2,h3{font-family:var(--disp);line-height:1.05;text-wrap:balance;margin:0;let
 button{font-family:var(--body);cursor:pointer;border:0;background:none;color:inherit}[hidden]{display:none!important}
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;padding:12px 0 10px;background:linear-gradient(var(--bg) 74%,transparent);}
 .brand{display:flex;align-items:center;gap:9px;font-family:var(--disp);font-weight:800;font-size:17px;letter-spacing:-.02em}
-.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#FF4D2E,#FF3D8B);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;letter-spacing:.02em;box-shadow:0 6px 14px -6px var(--primary)}
+.logo{display:inline-flex;align-items:center;height:30px}.logo svg{height:30px;width:auto;display:block}
 .topr{display:flex;align-items:center;gap:8px}
 .homebtn{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:7px 12px;border-radius:999px;font-weight:700;font-size:13.5px}
 .streakpill{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:7px 11px;border-radius:999px;font-weight:700;font-size:13.5px}.streakpill b{font-family:var(--mono);color:var(--primary)}
@@ -100,7 +100,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 </style></head><body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><span class="logo">IMS</span> IPMAT&nbsp;Arena</div>
+    <div class="brand"><span class="logo"><svg viewBox="0 0 120 52" role="img" aria-label="IMS — Trusted for Success"><ellipse cx="43" cy="26" rx="41" ry="23.5" fill="#fff" stroke="#141414" stroke-width="5"/><text x="43" y="35" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="800" font-style="italic" font-size="25" fill="#141414">IMS</text></svg></span> IPMAT&nbsp;Arena</div>
     <div class="topr"><button class="homebtn" id="homeBtn" hidden>⌂ Home</button><div class="streakpill" id="topStreak" hidden>🔥 <b>0</b></div></div>
   </div>
 
@@ -134,7 +134,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
     <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2></div>
     <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily 10</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button><button class="tab" data-t="batch">Batch vs Batch</button></div>
     <div class="card"><div class="league"><div class="crest">🏆</div><div><div class="nm">Gold League</div><div class="sub" id="leagueSub">Same 10 for everyone — fair by design.</div></div></div><div id="rows"></div></div>
-    <p class="foot">IPMAT Arena · IMS Ahmedabad · Prepared by JJ</p>
+    <p class="foot">IPMAT Arena · IMS Ahmedabad · <i>Trusted for Success</i></p>
   </section>
 </div>
 <script>
