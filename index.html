@@ -233,6 +233,19 @@ function show(id){["login","hub","quiz","results","tests","testplay","testresult
   $("#reportFab").hidden=!["quiz","testplay","extra","practice"].includes(id);
   window.scrollTo({top:0,behavior:"instant"});}
 $("#homeBtn").onclick=()=>openHub();
+/* tab-switch watch — notify on return during a question screen */
+let _leftAt=null,_tabSwitches=0;
+const _isTestScreen=()=>["quiz","testplay","practice","extra"].some(id=>{const e=$("#"+id);return e&&!e.hidden;});
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){if(_isTestScreen())_leftAt=Date.now();}
+  else if(_leftAt!=null){const secs=Math.max(1,Math.round((Date.now()-_leftAt)/1000));_leftAt=null;_tabSwitches++;showTabWarn(secs);}
+});
+function showTabWarn(secs){
+  document.querySelectorAll(".tabwarn").forEach(n=>n.remove());
+  const wrap=el("div","modal tabwarn");
+  wrap.innerHTML=`<div class="box"><h3>⚠️ You left the screen</h3><p>Away for ${secs}s. Switching tabs mid-practice is tracked — stay in the arena to keep your run clean.${_tabSwitches>1?` <b>(${_tabSwitches}× this session)</b>`:""}</p><div class="mbtns"><button class="btn sm" id="_tabOk" style="flex:1">Back to it →</button></div></div>`;
+  document.body.appendChild(wrap);wrap.querySelector("#_tabOk").onclick=()=>wrap.remove();
+}
 /* login */
 async function doLogin(){const pin=($("#pin").value||"").trim().toUpperCase(),out=$("#loginOut");
   if(!pin){out.innerHTML=`<div class="err">✗ Enter your PIN.</div>`;return;}
