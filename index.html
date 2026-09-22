@@ -55,7 +55,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .tiles{display:grid;gap:11px;margin-top:14px}
 .tile{display:flex;align-items:center;gap:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow);width:100%;transition:transform .1s}.tile:active{transform:scale(.99)}
 .tile .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:23px;flex:none}
-.tile.daily .ic{background:linear-gradient(135deg,#FF6A3D,#FF3D8B);color:#fff}.tile.tests .ic{background:color-mix(in srgb,var(--blue) 14%,#fff)}.tile.extra .ic{background:color-mix(in srgb,var(--green) 15%,#fff)}.tile.board .ic{background:color-mix(in srgb,var(--amber) 18%,#fff)}
+.tile.daily .ic{background:linear-gradient(135deg,#FF6A3D,#FF3D8B);color:#fff}.tile.map .ic{background:color-mix(in srgb,var(--violet) 16%,#fff)}.tile.tests .ic{background:color-mix(in srgb,var(--blue) 14%,#fff)}.tile.extra .ic{background:color-mix(in srgb,var(--green) 15%,#fff)}.tile.board .ic{background:color-mix(in srgb,var(--amber) 18%,#fff)}
 .tile .tt{font-family:var(--disp);font-weight:800;font-size:17px}.tile .ts{font-size:12.5px;color:var(--muted)}.tile .go{margin-left:auto;color:var(--faint);font-size:20px}.tile .pill{margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:color-mix(in srgb,var(--green) 15%,#fff);color:var(--good)}.tile .pill.warn{background:color-mix(in srgb,var(--primary) 13%,#fff);color:var(--primary)}
 /* tally */
 .tally{width:100%;border-collapse:collapse;font-size:13px}
@@ -140,7 +140,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   </section>
   <section id="results" hidden></section>
   <section id="tests" hidden>
-    <div class="section-h" style="margin-top:8px"><h2>Practice tests</h2></div><div id="testList"></div>
+    <div class="section-h" style="margin-top:8px"><h2>Drills</h2></div><div id="testList"></div>
     <p class="hint">Each test can be taken once, then it's review-only.</p>
   </section>
   <section id="testplay" hidden>
@@ -149,6 +149,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   </section>
   <section id="testresults" hidden></section>
   <section id="extra" hidden></section>
+  <section id="conquest" hidden></section>
   <section id="practice" hidden></section>
   <section id="board" hidden>
     <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2></div>
@@ -227,7 +228,7 @@ $("#reportSend").onclick=async()=>{const note=$("#reportNote").value;$("#reportM
   try{await api("/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME?ME.pin:"",qkey:currentQ?.qkey||"",source:currentQ?.source||"",stem:currentQ?.stem||"",note})});}catch(e){}
   const f=$("#reportFab"),o=f.textContent;f.textContent="✓ Flagged — thanks";setTimeout(()=>{f.textContent=o;},1800);};
 /* nav */
-function show(id){["login","hub","quiz","results","tests","testplay","testresults","extra","practice","board"].forEach(s=>$("#"+s).hidden=(s!==id));
+function show(id){["login","hub","quiz","results","tests","testplay","testresults","extra","conquest","practice","board"].forEach(s=>$("#"+s).hidden=(s!==id));
   $("#homeBtn").hidden=!(ME&&id!=="hub"&&id!=="login");
   $("#reportFab").hidden=!["quiz","testplay","extra","practice"].includes(id);
   window.scrollTo({top:0,behavior:"instant"});}
@@ -243,7 +244,7 @@ async function doLogin(){const pin=($("#pin").value||"").trim().toUpperCase(),ou
 $("#loginBtn").onclick=doLogin;$("#pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 /* HUB */
 function updateStreakPill(n){const p=$("#topStreak");p.hidden=false;p.innerHTML=`🔥 <b>${n}</b>`;}
-const COACH=["Miss a day and the streak resets. Don't hand me that excuse.","Your mistakes are the map. Go reconquer them in Extra Practice.","Ranks are earned before 9am. Get your Daily 10 in.","Speed is a skill. Solve, don't stare."];
+const COACH=["Miss a day and the streak resets. Don't hand me that excuse.","Your mistakes are the map. Go reconquer them.","Ranks are earned before 9am. Get your Daily 10 in.","Speed is a skill. Solve, don't stare."];
 async function openHub(){
   show("hub");const h=$("#hub");
   h.innerHTML=`<div class="hero"><div class="eyebrow">Welcome back</div><h1>${ME.name.split(" ")[0]}.</h1><p class="sub">Batch ${ME.batch} · Gold League.</p>
@@ -253,14 +254,14 @@ async function openHub(){
       <div class="bigstat cb"><div class="h">↺ Comeback Index</div><div class="v tnum" id="hCB">—</div><div class="subv" id="hCBsub">mistakes reconquered</div></div></div>
     <div class="tiles">
       <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily 10</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
-      <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Extra practice</span><span class="ts">Reconquer questions you missed</span></span><span class="go" id="extraGo">→</span></button>
+      <button class="tile map" id="tConquest"><span class="ic">🗺️</span><span><span class="tt">Conquest</span><span class="ts">Warm up &amp; grind · unlimited practice, level by level</span></span><span class="go">→</span></button>
+      <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Reconquer</span><span class="ts">Only the questions you got wrong</span></span><span class="go" id="extraGo">→</span></button>
       <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Curated topic tests · take once</span></span><span class="go">→</span></button>
       <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
     </div>
-    <div class="section-h"><h2>Conquest map · Practice</h2><span class="mono" style="font-size:12px;color:var(--faint)">tap a level</span></div>
-    <div class="cap"><span>🟦 open</span><span>⭐ cleared</span><span>🔒 locked</span><span style="opacity:.55">dim = soon</span></div>
-    <div id="mapWrap"><div class="spin"></div></div>`;
-  $("#tDaily").onclick=startDaily;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");
+    <div class="section-h"><h2>Conquest by area</h2><span class="mono" style="font-size:12px;color:var(--faint)">points</span></div>
+    <div class="card" id="areaCard"><div class="spin"></div></div>`;
+  $("#tDaily").onclick=startDaily;$("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");
   updateStreakPill(0);
   try{const m=await api("/me?pin="+encodeURIComponent(ME.pin));if(m.ok){
     $("#hStreak").textContent=m.streak;$("#hXp").textContent=m.xp;updateStreakPill(m.streak);
@@ -269,10 +270,26 @@ async function openHub(){
     $("#hCBsub").innerHTML=cb.total?`${cb.redos} extra solves · batch avg ${cb.peerAvg}${cb.redos>cb.peerAvg?' · <b style="color:var(--good)">ahead</b>':''}`:"no misses yet — nice";
     $("#extraGo").outerHTML=cb.open>0?`<span class="pill warn">${cb.open} to fix</span>`:`<span class="go">→</span>`;
     if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="pill">✓ done</span>`;
+    renderAreas(m.mastery);
   }}catch(e){}
   try{const lb=await api("/leaderboard?type=daily&day="+today());if(lb.ok){const i=lb.rows.findIndex(x=>x.name===ME.name);$("#hRank").textContent=i>=0?"#"+(i+1):"—";}}catch(e){}
-  loadCampaign();
 }
+const FAMILY={};const TW={"Warm-Up":1,"Exam-Relevant":2,"Heavy & Tricky":3,"Killer":4};
+SYLLABUS.forEach(([f,ts])=>ts.forEach(t=>FAMILY[t]=f));
+function renderAreas(mastery){
+  const box=$("#areaCard"),cp={};SYLLABUS.forEach(([f])=>cp[f]=0);
+  (mastery||[]).forEach(x=>{const f=FAMILY[x.topic];if(f)cp[f]+=(x.solved||0)*(TW[x.tier]||1);});
+  const max=Math.max(1,...Object.values(cp)),tot=Object.values(cp).reduce((a,b)=>a+b,0);
+  box.innerHTML=(tot===0?`<div class="empty" style="padding:8px 0 14px">Start a Conquest or Daily 10 — your points build up by area here.</div>`:"")
+    +SYLLABUS.map(([f])=>{const v=cp[f]||0,pc=Math.round(v/max*100);
+    return `<div style="display:flex;align-items:center;gap:11px;margin:9px 0"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">${f}</div><div class="bar" style="margin-top:5px;height:7px"><i style="width:${pc}%"></i></div></div><div class="mono" style="font-weight:700;color:var(--violet);width:36px;text-align:right">${v}</div></div>`;}).join("");
+}
+function openConquest(){show("conquest");const s=$("#conquest");
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Conquest · Practice</h2><span class="link" id="cqBack">← Home</span></div>
+    <p class="cap" style="margin:0 4px 8px">Warm up &amp; grind — unlimited practice. Clear a level to unlock the next.</p>
+    <div class="cap"><span>🟦 open</span><span>⭐ cleared</span><span>🔒 locked</span><span style="opacity:.55">dim = soon</span></div>
+    <div id="mapWrap"><div class="spin"></div></div>`;
+  $("#cqBack").onclick=openHub;loadCampaign();}
 /* ---------- CAMPAIGN MAP ---------- */
 async function loadCampaign(){
   const box=$("#mapWrap");
@@ -420,19 +437,19 @@ async function finishDaily(){clearInterval(timerId);
     <div class="badges">${badges.map(b=>`<span class="badge"><span class="e">${b[0]}</span>${b[1]}</span>`).join("")}</div>
     <div class="aspire"><div class="t"><span>You vs IIM Indore QA cutoff</span><span class="mono">${myPct}%ile</span></div><div class="track"><div class="cut" style="left:${cutPct}%"><b>cutoff</b></div><div class="fillbar" id="fill"></div></div><div class="msg">${weeks}</div></div>`;
   s.append(c);
-  const miss=10-right;const c2=el("div","card");c2.style.marginTop="14px";c2.innerHTML=`<div style="font-weight:800;margin-bottom:4px">${right>=8?"Big day. The board's about to feel it.":right>=5?"Solid. Go steal some ranks.":"Rough round — the streak lives."}</div><div style="color:var(--muted);font-size:14px">${miss>0?`You missed ${miss}. `:""}Reconquer them in <span class="link" id="toExtra" style="cursor:pointer">Extra Practice →</span></div>`;
+  const miss=10-right;const c2=el("div","card");c2.style.marginTop="14px";c2.innerHTML=`<div style="font-weight:800;margin-bottom:4px">${right>=8?"Big day. The board's about to feel it.":right>=5?"Solid. Go steal some ranks.":"Rough round — the streak lives."}</div><div style="color:var(--muted);font-size:14px">${miss>0?`You missed ${miss}. `:""}Fix them in <span class="link" id="toExtra" style="cursor:pointer">Reconquer →</span></div>`;
   s.append(c2);show("results");setTimeout(()=>{const f=$("#fill");if(f)f.style.width=myPct+"%";},160);
   $("#toBoard").onclick=()=>openBoard("daily");$("#toExtra").onclick=openExtra;}
 /* ---------- EXTRA PRACTICE ---------- */
 let ex={list:[],i:0,items:[],sel:null,answered:false};
-async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Extra practice</h2></div><div class="card"><div class="spin"></div></div>`;
+async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let r;try{r=await api("/extra?pin="+encodeURIComponent(ME.pin));}catch(e){s.querySelector(".card").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
-  if(!r.ok||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Extra practice</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily 10 to find your next challenge.</div></div>`;return;}
+  if(!r.ok||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily 10 to find your next challenge.</div></div>`;return;}
   ex={list:r.wrongs.slice(0,10),i:0,items:[],sel:null,answered:false};exRender();}
 function exRender(){const s=$("#extra");const w=ex.list[ex.i];const gen=w.gen_id&&GBYID[w.gen_id]?GBYID[w.gen_id]:genForTopic(w.topic);
   if(!ex.cur||ex.curKey!==w.qkey){ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curKey=w.qkey;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
   setReportCtx(w.qkey,"extra",ex.cur.q);
-  const q=ex.cur;s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Extra practice</h2><span class="mono" style="font-size:12px;color:var(--faint)">${ex.i+1} / ${ex.list.length}</span></div>
+  const q=ex.cur;s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="mono" style="font-size:12px;color:var(--faint)">${ex.i+1} / ${ex.list.length}</span></div>
     <div class="card"><div style="font-size:12.5px;color:var(--green);font-weight:800;margin-bottom:8px">↺ REMATCH · same idea, new numbers</div>
     <div class="qmeta"><span class="chip t">${q.topic}</span><span class="chip ${tierClass(q.tier)}">${q.tier||"Practice"}</span></div>
     <div class="qtext">${q.q}</div><div class="answers" id="exA"></div><div id="exFb"></div><div class="navrow" id="exBtns"></div></div>`;
@@ -452,7 +469,7 @@ function exLock(){const q=ex.cur;let given,correct;
   ex.answered=true;ex.lastCorrect=correct;
   ex.items.push({qkey:ex.list[ex.i].qkey,genId:ex.curGen,topic:q.topic,tier:q.tier,correct});exRender();}
 async function exNext(){if(ex.i<ex.list.length-1){ex.i++;ex.cur=null;exRender();return;}
-  const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Extra practice</h2></div><div class="card"><div class="spin"></div></div>`;
+  const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let resolved=0;try{const r=await api("/redo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:ex.items})});if(r.ok)resolved=r.resolved;}catch(e){}
   const right=ex.items.filter(i=>i.correct).length;
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquered</h2><span class="link" id="exHome">← Home</span></div>
