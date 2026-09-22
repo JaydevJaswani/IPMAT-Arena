@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPMAT Arena — Reported Issues</title>
+<style>
+:root{--ink:#1a1526;--bg:#faf7ff;--line:#e7e1ef;--muted:#6b6280;--primary:#ff4d2e;--bad:#f4335f}
+*{box-sizing:border-box}body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:26px 18px 60px}
+h1{font-size:24px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:6px}
+input{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px;margin-bottom:12px}
+.two{display:flex;gap:12px}.two>div{flex:1}
+button{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-weight:700;font-size:15px;cursor:pointer}
+.iss{border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.iss .m{font-size:11.5px;color:var(--muted);font-family:ui-monospace,monospace;margin-bottom:5px}
+.iss .s{font-weight:600}.iss .n{color:var(--bad);font-size:13.5px;margin-top:5px}
+.empty{color:var(--muted);text-align:center;padding:30px}
+</style></head><body><div class="wrap">
+<h1>⚑ Reported issues</h1><p class="sub">Questions students flagged as wrong / unclear. Newest first.</p>
+<div class="card">
+  <div class="two"><div><label>Worker URL</label><input id="api" placeholder="https://ipmat-arena.xxx.workers.dev"></div>
+  <div><label>Admin key</label><input id="key" type="password" placeholder="ADMIN_KEY"></div></div>
+  <button id="load">Load flags</button>
+</div>
+<div id="out"></div>
+</div><script>
+const $=s=>document.querySelector(s);
+$("#load").onclick=async()=>{
+  const api=$("#api").value.trim().replace(/\/$/,''),key=$("#key").value.trim();
+  if(!api||!key){$("#out").innerHTML='<div class="empty">Enter Worker URL + admin key.</div>';return;}
+  $("#out").innerHTML='<div class="empty">Loading…</div>';
+  try{const r=await fetch(api+"/admin/issues",{headers:{"X-Admin-Key":key}});const j=await r.json();
+    if(!j.ok){$("#out").innerHTML='<div class="empty">'+(j.error||'failed')+'</div>';return;}
+    if(!j.issues.length){$("#out").innerHTML='<div class="empty">🎉 No open flags. Every question is clean.</div>';return;}
+    $("#out").innerHTML='<div class="card"><b>'+j.issues.length+' open flag(s)</b></div>'+j.issues.map(i=>
+      `<div class="iss"><div class="m">${i.created_at} · ${i.source||'—'} · ${i.qkey||''} · ${i.pin||''}</div><div class="s">${(i.stem||'').slice(0,220)}</div>${i.note?`<div class="n">“${i.note}”</div>`:''}</div>`).join("");
+  }catch(e){$("#out").innerHTML='<div class="empty">'+e.message+'</div>';}
+};
+</script></body></html>
