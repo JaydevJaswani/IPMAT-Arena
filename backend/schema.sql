@@ -80,6 +80,14 @@ CREATE TABLE IF NOT EXISTS wrongs (
   PRIMARY KEY (pin, qkey)
 );
 
+-- Student-reported problems with a question (bad answer, typo, unclear).
+CREATE TABLE IF NOT EXISTS issues (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pin TEXT, qkey TEXT, source TEXT, stem TEXT, note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved INTEGER NOT NULL DEFAULT 0
+);
+
 -- Test completions — a test is taken once, then review-only.
 CREATE TABLE IF NOT EXISTS test_done (
   pin TEXT NOT NULL, test_id TEXT NOT NULL,

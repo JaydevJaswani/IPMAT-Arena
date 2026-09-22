@@ -41,6 +41,12 @@ export default {
       if (p === "/review")               return review(url, env);
       if (p === "/extra")                return extra(url, env);
       if (p === "/redo")                 return redo(req, env);
+      if (p === "/practice")             return practice(url, env);
+      if (p === "/pgrade")               return pgrade(req, env);
+      if (p === "/plog")                 return plog(req, env);
+      if (p === "/campaign")             return campaign(url, env);
+      if (p === "/report")               return report(req, env);
+      if (p === "/admin/issues")         return adminIssues(req, env);
       if (p === "/admin/upload-roster")  return uploadRoster(req, env);
       if (p === "/admin/upload-test")    return uploadTest(req, env);
       if (p === "/admin/roster-count")   return rosterCount(req, env);
@@ -255,6 +261,78 @@ async function redo(req, env) {
     }
   }
   return json({ ok: true, resolved });
+}
+
+// ---- campaign / practice ----
+const LVL_TIER = { L1: "Warm-Up", L2: "Exam-Relevant", L3: "Heavy & Tricky", L4: "Killer" };
+const CLEAR = { L1: 5, L2: 6, L3: 7, L4: 8 };  // correct-answers threshold per level
+
+async function practice(url, env) {
+  const topic = url.searchParams.get("topic"), level = url.searchParams.get("level");
+  const tier = LVL_TIER[level] || "Exam-Relevant";
+  const qs = (await env.DB.prepare(
+    "SELECT id,topic,tier,type,mode,stem,options FROM questions WHERE test_id='practice' AND topic=? AND tier=? ORDER BY RANDOM() LIMIT 12"
+  ).bind(topic, tier).all()).results;
+  return json({ ok: true, questions: qs.map(q => ({ ...q, options: q.options ? JSON.parse(q.options) : null })) });
+}
+// grade a batch of static pool questions (answers stay server-side)
+async function pgrade(req, env) {
+  const { pin, topic, level, items } = await req.json();  // items: [{id, given}]
+  const cpin = cleanPin(pin), tier = LVL_TIER[level] || "Exam-Relevant";
+  const ids = (items || []).map(i => i.id);
+  if (!ids.length) return json({ ok: true, detail: [] });
+  const ph = ids.map(() => "?").join(",");
+  const qs = (await env.DB.prepare(
+    `SELECT id,type,answer,answer_display,solution,trap,topic,tier FROM questions WHERE id IN (${ph})`).bind(...ids).all()).results;
+  const byId = {}; qs.forEach(q => byId[q.id] = q);
+  const logs = []; const detail = [];
+  for (const it of items) {
+    const q = byId[it.id]; if (!q) continue;
+    const ok = q.type === "int" ? Number(it.given) === Number(q.answer) : normAns(it.given) === normAns(q.answer);
+    logs.push(qlogStmt(env).bind(cpin, q.topic, q.tier, q.id, "practice", ok ? 1 : 0, 0));
+    if (!ok) await env.DB.prepare("INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,NULL,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1,resolved=0").bind(cpin, q.id, q.topic, q.tier).run();
+    detail.push({ id: q.id, correct: ok, answer: q.answer_display || q.answer, solution: q.solution, trap: q.trap });
+  }
+  if (logs.length) await env.DB.batch(logs);
+  return json({ ok: true, detail });
+}
+// log generator-based practice (client-graded), update wrongs/mastery
+async function plog(req, env) {
+  const { pin, items } = await req.json();  // [{genId, topic, tier, correct}]
+  const cpin = cleanPin(pin);
+  if (!Array.isArray(items) || !items.length) return json({ ok: false }, 400);
+  const logs = items.map(it => qlogStmt(env).bind(cpin, it.topic || "", it.tier || "", "g:" + (it.genId || ""), "practice", it.correct ? 1 : 0, 0));
+  await env.DB.batch(logs);
+  for (const it of items) {
+    if (!it.genId) continue;
+    if (it.correct) await env.DB.prepare("UPDATE wrongs SET resolved=1 WHERE pin=? AND gen_id=? AND resolved=0").bind(cpin, it.genId).run();
+    else await env.DB.prepare("INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,?,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1,resolved=0").bind(cpin, "g:" + it.genId, it.topic || "", it.tier || "", it.genId).run();
+  }
+  return json({ ok: true });
+}
+// per-topic per-level cleared/progress for the campaign map
+async function campaign(url, env) {
+  const pin = cleanPin(url.searchParams.get("pin"));
+  const rows = (await env.DB.prepare(
+    "SELECT topic,tier,COALESCE(SUM(correct),0) solved,COUNT(*) seen FROM q_log WHERE pin=? GROUP BY topic,tier").bind(pin).all()).results;
+  const pool = (await env.DB.prepare(
+    "SELECT topic,tier,COUNT(*) n FROM questions WHERE test_id='practice' GROUP BY topic,tier").all()).results;
+  return json({ ok: true, progress: rows, thresholds: CLEAR, pool });
+}
+
+// student flags a bad question
+async function report(req, env) {
+  const b = await req.json();
+  await env.DB.prepare("INSERT INTO issues (pin,qkey,source,stem,note) VALUES (?,?,?,?,?)")
+    .bind(cleanPin(b.pin), String(b.qkey || "").slice(0, 120), String(b.source || "").slice(0, 40),
+      String(b.stem || "").slice(0, 400), String(b.note || "").slice(0, 500)).run();
+  return json({ ok: true });
+}
+async function adminIssues(req, env) {
+  if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
+  const r = await env.DB.prepare(
+    "SELECT id,pin,qkey,source,stem,note,created_at FROM issues WHERE resolved=0 ORDER BY id DESC LIMIT 200").all();
+  return json({ ok: true, issues: r.results });
 }
 
 // ---- admin ----

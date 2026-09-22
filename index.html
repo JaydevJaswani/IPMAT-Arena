@@ -93,6 +93,25 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .league{display:flex;align-items:center;gap:12px;margin-bottom:14px}.crest{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,#FFE08A,#FFB800);box-shadow:0 8px 18px -8px var(--gold)}.league .nm{font-family:var(--disp);font-weight:800;font-size:20px}.league .sub{font-size:12.5px;color:var(--muted)}
 .row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:13px;border:1.5px solid transparent}.row+.row{margin-top:3px}.row .rk{font-family:var(--mono);font-weight:700;width:26px;text-align:right;color:var(--muted)}.row .av{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-family:var(--disp);color:#fff;font-size:14px;overflow:hidden}.row .who{flex:1;min-width:0}.row .who .n{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row .who .bt{font-size:11.5px;color:var(--faint);font-family:var(--mono)}.row .sc{font-family:var(--mono);font-weight:700;font-size:16px}.row.you{background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 12%,#fff),#fff);border-color:var(--primary)}.row.top3 .rk{color:var(--gold)}
 .empty{color:var(--muted);text-align:center;padding:24px 10px;font-size:14px}
+.fam{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:800;margin:18px 4px 8px}
+.trow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:9px 11px;box-shadow:var(--shadow);margin-bottom:8px}
+.trow .tn{flex:1;min-width:0;font-weight:700;font-size:13.5px;line-height:1.2}
+.nodes{display:flex;gap:6px}
+.node{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:12px;border:1.5px solid var(--line);background:var(--card2);color:var(--faint);position:relative;flex:none;padding:0}
+.node.soon{opacity:.38}
+.node.open{background:color-mix(in srgb,var(--blue) 10%,#fff);border-color:var(--blue);color:var(--blue);cursor:pointer}
+.node.cleared{background:linear-gradient(135deg,#FFE9A8,#FFC24B);border-color:var(--gold);color:#7a5600;cursor:pointer}
+.node small{position:absolute;bottom:3px;font-size:8px;opacity:.75;font-family:var(--body)}
+.cap{font-size:11.5px;color:var(--faint);margin:2px 4px 10px;display:flex;gap:12px;flex-wrap:wrap}
+#reportFab{position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#fff;border:1.5px solid var(--line);box-shadow:var(--shadow);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.modal{position:fixed;inset:0;background:rgba(20,10,40,.4);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal .box{background:#fff;border-radius:16px;padding:20px;max-width:360px;width:100%;box-shadow:0 20px 50px -10px rgba(0,0,0,.4)}
+.modal h3{font-size:18px;margin:0 0 4px}.modal p{color:var(--muted);font-size:13px;margin:0}
+.modal textarea{width:100%;min-height:66px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-family:var(--body);font-size:14px;margin-top:12px;resize:vertical}
+.modal .mbtns{display:flex;gap:10px;margin-top:12px}
+.pmeter{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.pmeter .rg{flex:1;height:12px;border-radius:999px;background:var(--card2);border:1.5px solid var(--line);overflow:hidden}.pmeter .rg i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .4s}
+.pmeter .lbl{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--muted)}
 .foot{color:var(--faint);font-size:12px;text-align:center;margin-top:26px;line-height:1.6}
 .pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:sp 1s linear infinite;margin:20px auto}@keyframes sp{to{transform:rotate(360deg)}}
@@ -130,6 +149,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   </section>
   <section id="testresults" hidden></section>
   <section id="extra" hidden></section>
+  <section id="practice" hidden></section>
   <section id="board" hidden>
     <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2></div>
     <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily 10</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button><button class="tab" data-t="batch">Batch vs Batch</button></div>
@@ -137,6 +157,12 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
     <p class="foot">IPMAT Arena · IMS Ahmedabad · <i>Trusted for Success</i></p>
   </section>
 </div>
+<button id="reportFab" hidden>⚑ Report issue</button>
+<div id="reportModal" class="modal" hidden><div class="box">
+  <h3>Report this question</h3><p>Wrong answer, typo, or unclear? Flag it and JJ will check.</p>
+  <textarea id="reportNote" placeholder="What looks off? (optional)"></textarea>
+  <div class="mbtns"><button class="btn ghost sm" id="reportCancel" style="flex:1">Cancel</button><button class="btn sm" id="reportSend" style="flex:1">Send flag</button></div>
+</div></div>
 <script>
 "use strict";
 const CONFIG={API:"https://ipmat-arena.jaydev-jaswani.workers.dev"};
@@ -177,9 +203,34 @@ const G=[
 const GBYID={};G.forEach(g=>GBYID[g.id]=g);
 const genForTopic=t=>{const m=G.filter(g=>g.topic===t);return m.length?pick(m):pick(G);};
 const tierClass=t=>t&&t.startsWith("Warm")?"warm":t&&t.startsWith("Exam")?"exam":"heavy";
+/* canonical topics + campaign coverage */
+const TCANON={"Linear Equations":"Linear & Quadratic Equations","Number Theory":"Remainders & Number Theory","Averages & Ratio":"Averages & Mixtures"};
+G.forEach(g=>{g.topic=TCANON[g.topic]||g.topic;});
+const TIERLVL={"Warm-Up":"L1","Exam-Relevant":"L2","Heavy & Tricky":"L3","Killer":"L4"};
+const LVLTIER={L1:"Warm-Up",L2:"Exam-Relevant",L3:"Heavy & Tricky",L4:"Killer"};
+const LVLNAME={L1:"Easy",L2:"Med",L3:"Hard",L4:"Killer"};
+const genCov=new Set();G.forEach(g=>genCov.add(g.topic+"|"+TIERLVL[g.tier]));
+const genByTL=(t,l)=>G.filter(g=>g.topic===t&&TIERLVL[g.tier]===l);
+const SYLLABUS=[
+ ["Arithmetic",["Number System","Remainders & Number Theory","Percentages","Profit, Loss & Discount","SI & CI","Ratio & Proportion","Averages & Mixtures","Time, Speed & Distance","Time & Work"]],
+ ["Algebra",["Linear & Quadratic Equations","Inequalities & Modulus","Surds & Indices","Logarithms","Sequences & Series","Functions & Graphs"]],
+ ["Geometry & Mensuration",["Triangles & Polygons","Circles","Coordinate Geometry","Mensuration","Trigonometry"]],
+ ["Modern Math",["Permutations & Combinations","Probability","Set Theory & Venn","Matrices & Determinants"]],
+ ["Data Interpretation",["Data Interpretation"]]];
+let CAMPAIGN={thr:{L1:5,L2:6,L3:7,L4:8},solved:{},poolCov:new Set()};
+/* report issue */
+let currentQ=null;
+const setReportCtx=(qkey,source,stem)=>{currentQ={qkey,source,stem};};
+$("#reportFab").onclick=()=>{$("#reportNote").value="";$("#reportModal").hidden=false;};
+$("#reportCancel").onclick=()=>{$("#reportModal").hidden=true;};
+$("#reportSend").onclick=async()=>{const note=$("#reportNote").value;$("#reportModal").hidden=true;
+  try{await api("/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME?ME.pin:"",qkey:currentQ?.qkey||"",source:currentQ?.source||"",stem:currentQ?.stem||"",note})});}catch(e){}
+  const f=$("#reportFab"),o=f.textContent;f.textContent="✓ Flagged — thanks";setTimeout(()=>{f.textContent=o;},1800);};
 /* nav */
-function show(id){["login","hub","quiz","results","tests","testplay","testresults","extra","board"].forEach(s=>$("#"+s).hidden=(s!==id));
-  $("#homeBtn").hidden=!(ME&&id!=="hub"&&id!=="login");window.scrollTo({top:0,behavior:"instant"});}
+function show(id){["login","hub","quiz","results","tests","testplay","testresults","extra","practice","board"].forEach(s=>$("#"+s).hidden=(s!==id));
+  $("#homeBtn").hidden=!(ME&&id!=="hub"&&id!=="login");
+  $("#reportFab").hidden=!["quiz","testplay","extra","practice"].includes(id);
+  window.scrollTo({top:0,behavior:"instant"});}
 $("#homeBtn").onclick=()=>openHub();
 /* login */
 async function doLogin(){const pin=($("#pin").value||"").trim().toUpperCase(),out=$("#loginOut");
@@ -203,11 +254,12 @@ async function openHub(){
     <div class="tiles">
       <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily 10</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
       <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Extra practice</span><span class="ts">Reconquer questions you missed</span></span><span class="go" id="extraGo">→</span></button>
-      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Practice tests</span><span class="ts">Topic sets from JJ's decks</span></span><span class="go">→</span></button>
+      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Curated topic tests · take once</span></span><span class="go">→</span></button>
       <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
     </div>
-    <div class="section-h"><h2>Your conquest map</h2><span class="mono" style="font-size:12px;color:var(--faint)">solved / seen</span></div>
-    <div class="card" id="tallyCard"><div class="spin"></div></div>`;
+    <div class="section-h"><h2>Conquest map · Practice</h2><span class="mono" style="font-size:12px;color:var(--faint)">tap a level</span></div>
+    <div class="cap"><span>🟦 open</span><span>⭐ cleared</span><span>🔒 locked</span><span style="opacity:.55">dim = soon</span></div>
+    <div id="mapWrap"><div class="spin"></div></div>`;
   $("#tDaily").onclick=startDaily;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");
   updateStreakPill(0);
   try{const m=await api("/me?pin="+encodeURIComponent(ME.pin));if(m.ok){
@@ -217,18 +269,101 @@ async function openHub(){
     $("#hCBsub").innerHTML=cb.total?`${cb.redos} extra solves · batch avg ${cb.peerAvg}${cb.redos>cb.peerAvg?' · <b style="color:var(--good)">ahead</b>':''}`:"no misses yet — nice";
     $("#extraGo").outerHTML=cb.open>0?`<span class="pill warn">${cb.open} to fix</span>`:`<span class="go">→</span>`;
     if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="pill">✓ done</span>`;
-    renderTally(m.mastery);
   }}catch(e){}
   try{const lb=await api("/leaderboard?type=daily&day="+today());if(lb.ok){const i=lb.rows.findIndex(x=>x.name===ME.name);$("#hRank").textContent=i>=0?"#"+(i+1):"—";}}catch(e){}
+  loadCampaign();
 }
-function renderTally(mastery){
-  const box=$("#tallyCard");
-  if(!mastery||!mastery.length){box.innerHTML=`<div class="empty">Play a Daily 10 or a test — your topic × level progress fills in here.</div>`;return;}
-  const tiers=["Warm-Up","Exam-Relevant","Heavy & Tricky"],tn={"Warm-Up":"Easy","Exam-Relevant":"Med","Heavy & Tricky":"Hard"};
-  const topics={};mastery.forEach(m=>{topics[m.topic]=topics[m.topic]||{};topics[m.topic][m.tier]={seen:m.seen,solved:m.solved};});
-  let html=`<table class="tally"><tr><th class="tp" style="text-align:left">Topic</th>${tiers.map(t=>`<th>${tn[t]}</th>`).join("")}</tr>`;
-  Object.keys(topics).forEach(tp=>{html+=`<tr><td class="tp">${tp}</td>`+tiers.map(t=>{const c=topics[tp][t];if(!c)return`<td><span class="t">–</span></td>`;const pctv=c.seen?Math.round(c.solved/c.seen*100):0;return`<td><span class="cellv"><span class="s">${c.solved}</span><span class="t">/${c.seen}</span></span><span class="bar"><i style="width:${pctv}%"></i></span></td>`;}).join("")+`</tr>`;});
-  box.innerHTML=html+`</table>`;
+/* ---------- CAMPAIGN MAP ---------- */
+async function loadCampaign(){
+  const box=$("#mapWrap");
+  let d;try{d=await api("/campaign?pin="+encodeURIComponent(ME.pin));}catch(e){box.innerHTML=`<div class="empty">Map unavailable.</div>`;return;}
+  const thr=d.thresholds||{L1:5,L2:6,L3:7,L4:8},solved={},poolCov=new Set();
+  (d.progress||[]).forEach(r=>solved[r.topic+"|"+TIERLVL[r.tier]]=r.solved);
+  (d.pool||[]).forEach(r=>poolCov.add(r.topic+"|"+TIERLVL[r.tier]));
+  CAMPAIGN={thr,solved,poolCov};
+  let html="";
+  SYLLABUS.forEach(([fam,topics])=>{
+    html+=`<div class="fam">${fam}</div>`;
+    topics.forEach(tp=>{
+      let chainOK=true;
+      const cells=["L1","L2","L3","L4"].map(L=>{
+        const has=genCov.has(tp+"|"+L)||poolCov.has(tp+"|"+L);
+        const sv=solved[tp+"|"+L]||0,tgt=thr[L],cleared=has&&sv>=tgt;
+        let state;
+        if(!has)state="soon";
+        else{state=cleared?"cleared":(chainOK?"open":"locked");chainOK=chainOK&&cleared;}
+        return {L,has,sv,tgt,state};
+      });
+      html+=`<div class="trow"><div class="tn">${tp}</div><div class="nodes">`+cells.map(c=>{
+        if(c.state==="soon")return `<div class="node soon">${LVLNAME[c.L]}<small>soon</small></div>`;
+        if(c.state==="locked")return `<div class="node">🔒<small>${LVLNAME[c.L]}</small></div>`;
+        if(c.state==="cleared")return `<button class="node cleared" data-t="${tp}" data-l="${c.L}">⭐<small>${LVLNAME[c.L]}</small></button>`;
+        return `<button class="node open" data-t="${tp}" data-l="${c.L}">${c.sv}/${c.tgt}<small>${LVLNAME[c.L]}</small></button>`;
+      }).join("")+`</div></div>`;
+    });
+  });
+  box.innerHTML=html;
+  box.querySelectorAll(".node.open,.node.cleared").forEach(n=>n.onclick=()=>openPractice(n.dataset.t,n.dataset.l));
+}
+/* ---------- PRACTICE RUNNER (untimed campaign) ---------- */
+let PS=null;
+async function openPractice(topic,level){
+  const backing=genCov.has(topic+"|"+level)?"gen":"static";
+  PS={topic,level,tier:LVLTIER[level],backing,target:CAMPAIGN.thr[level]||6,solved:CAMPAIGN.solved[topic+"|"+level]||0,pool:[],pi:0,cur:null,answered:false,sel:null};
+  show("practice");
+  if(backing==="static"){
+    $("#practice").innerHTML=`<div class="spin"></div>`;
+    try{const r=await api("/practice?topic="+encodeURIComponent(topic)+"&level="+level);PS.pool=r.questions||[];}catch(e){}
+    if(!PS.pool.length){$("#practice").innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic}</h2><span class="link" id="pBack">← Map</span></div><div class="card"><div class="empty">No questions here yet — coming soon.</div></div>`;$("#pBack").onclick=openHub;return;}
+    PS.pool=shuffle(PS.pool);
+  }
+  pNext();
+}
+function pBuildQ(){
+  if(PS.backing==="gen"){const g=pick(genByTL(PS.topic,PS.level));const q=g.make();q.topic=PS.topic;q.tier=PS.tier;q._gen=g.id;return q;}
+  const s=PS.pool[PS.pi%PS.pool.length];PS.pi++;
+  return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};
+}
+function pNext(){PS.cur=pBuildQ();PS.answered=false;PS.sel=null;pRender();}
+function pRender(){
+  const q=PS.cur,s=$("#practice"),stem=q.q||q.stem;
+  setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
+  const pct=Math.min(100,Math.round(PS.solved/PS.target*100));
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${PS.topic}</h2><span class="link" id="pBack">← Map</span></div>
+    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">${PS.solved}/${PS.target} · ${LVLNAME[PS.level]}</div></div>
+    <div class="card"><div class="qmeta"><span class="chip t">${PS.topic}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span></div>
+    <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
+  $("#pBack").onclick=openHub;const A=$("#pA");
+  if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
+    if(PS.answered){if(o===PS.correctAns)b.classList.add("correct");else if(o===PS.sel&&o!==PS.correctAns)b.classList.add("miss");}
+    else b.onclick=()=>{PS.sel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});}
+  else{const w=el("div","numin"),inp=el("input");inp.id="pNum";inp.type="text";inp.inputMode="numeric";inp.placeholder="type your answer";
+    if(PS.answered){inp.value=PS.sel;inp.disabled=true;}else inp.addEventListener("keydown",e=>{if(e.key==="Enter")pCheck();});w.appendChild(inp);A.appendChild(w);if(!PS.answered)setTimeout(()=>inp.focus(),40);}
+  if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
+  const B=$("#pB");
+  if(!PS.answered){const c=el("button","btn","Check");c.onclick=pCheck;B.appendChild(c);}
+  else if(PS.solved>=PS.target){const done=el("button","btn","⭐ Level cleared →");done.onclick=pCleared;B.appendChild(done);}
+  else{const n=el("button","btn","Next question →");n.onclick=pNext;B.appendChild(n);}
+}
+async function pCheck(){
+  const q=PS.cur;let given;
+  if(q.kind==="mcq"){if(PS.sel==null)return;given=PS.sel;}
+  else{const v=($("#pNum").value||"").trim();if(v==="")return;given=v;PS.sel=v;}
+  let correct=false,correctAns="",sol="";
+  if(PS.backing==="gen"){correct=(q.kind==="mcq"?given===q.answer:Number(given)===Number(q.answer));correctAns=q.answer;sol=q.sol;
+    api("/plog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:[{genId:q._gen,topic:PS.topic,tier:PS.tier,correct}]})}).catch(()=>{});}
+  else{try{const r=await api("/pgrade",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,items:[{id:q._static,given}]})});const d=(r.detail&&r.detail[0])||{};correct=!!d.correct;correctAns=d.answer;sol=d.solution;}catch(e){}}
+  PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;if(correct)PS.solved++;pRender();
+}
+function pCleared(){
+  const s=$("#practice"),nextL={L1:"L2",L2:"L3",L3:"L4",L4:null}[PS.level];
+  const nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL));
+  CAMPAIGN.solved[PS.topic+"|"+PS.level]=PS.solved;
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level cleared</h2><span class="link" id="pHome">← Map</span></div>
+    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${PS.topic} · ${LVLNAME[PS.level]} conquered</div>
+    <div style="color:var(--muted);margin-top:6px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"Top tier here — you're a legend. More coming."}</div>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center">${nextHas?`<button class="btn sm" id="pNextL">Take on ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pHome2">Back to map</button></div></div>`;
+  $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);
 }
 /* ---------- generic answer feedback ---------- */
 function fbBlock(correct,marks,q){const fb=el("div","fb "+(correct?"ok":"no")+" pop");
@@ -249,7 +384,7 @@ function ddots(){const box=$("#dots");box.innerHTML="";deck.forEach((q,i)=>{cons
 function renderDaily(){const q=deck[cur],answered=!!dAns[cur];ddots();
   timerRun=!answered; if(answered){$("#timer").classList.add("paused");$("#timer").textContent="⏸ paused";}else{$("#timer").classList.remove("paused");const m=Math.floor(tLeft/60),s=tLeft%60;$("#timer").textContent=m+":"+String(s).padStart(2,"0");}
   $("#qmeta").innerHTML="";$("#qmeta").append(el("span","chip t",q.topic),el("span","chip "+tierClass(q.tier),q.tier),el("span","chip n","Q"+(cur+1)+" / 10"));
-  $("#qtext").innerHTML=q.q;const A=$("#answers");A.innerHTML="";$("#fbWrap").innerHTML="";dSel=null;
+  $("#qtext").innerHTML=q.q;setReportCtx("g:"+q.genId,"daily",q.q);const A=$("#answers");A.innerHTML="";$("#fbWrap").innerHTML="";dSel=null;
   if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
     if(answered){if(o===q.answer)b.classList.add("correct");else if(o===dAns[cur].given&&!dAns[cur].correct)b.classList.add("miss");}
     else b.onclick=()=>{dSel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});}
@@ -296,6 +431,7 @@ async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div c
   ex={list:r.wrongs.slice(0,10),i:0,items:[],sel:null,answered:false};exRender();}
 function exRender(){const s=$("#extra");const w=ex.list[ex.i];const gen=w.gen_id&&GBYID[w.gen_id]?GBYID[w.gen_id]:genForTopic(w.topic);
   if(!ex.cur||ex.curKey!==w.qkey){ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curKey=w.qkey;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
+  setReportCtx(w.qkey,"extra",ex.cur.q);
   const q=ex.cur;s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Extra practice</h2><span class="mono" style="font-size:12px;color:var(--faint)">${ex.i+1} / ${ex.list.length}</span></div>
     <div class="card"><div style="font-size:12.5px;color:var(--green);font-weight:800;margin-bottom:8px">↺ REMATCH · same idea, new numbers</div>
     <div class="qmeta"><span class="chip t">${q.topic}</span><span class="chip ${tierClass(q.tier)}">${q.tier||"Practice"}</span></div>
@@ -344,7 +480,7 @@ function tpResumeAvailable(){try{return JSON.parse(sessionStorage.getItem("ims_t
 function tpdots(){const box=$("#tpDots");box.innerHTML="";tp.qs.forEach((q,i)=>{const s=el("i");if(tp.ans[q.id]!=null&&tp.ans[q.id]!=="")s.classList.add("done");else if(i===tp.i)s.classList.add("now");box.appendChild(s);});}
 function tpShow(){const q=tp.qs[tp.i];tpdots();
   $("#tpMeta").innerHTML="";$("#tpMeta").append(el("span","chip t",q.topic||tp.name),el("span","chip "+tierClass(q.tier),q.tier||"Practice"),el("span","chip n","Q"+(tp.i+1)+" / "+tp.qs.length));
-  $("#tpText").innerHTML=q.stem;const A=$("#tpAnswers");A.innerHTML="";
+  $("#tpText").innerHTML=q.stem;setReportCtx(q.id,"test:"+tp.id,q.stem);const A=$("#tpAnswers");A.innerHTML="";
   if(q.mode==="open"){A.append(el("div","fb","<div class='tag'>Open / self-check</div><div style='margin-top:6px;color:var(--muted);font-size:14px'>Work it out — full solution on the review page. Not auto-scored.</div>"));}
   else if(q.type==="mcq"&&q.options){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");if(tp.ans[q.id]===o)b.classList.add("sel");b.onclick=()=>{tp.ans[q.id]=o;tpShow();};A.appendChild(b);});}
   else{const w=el("div","numin"),inp=el("input");inp.type="text";inp.value=tp.ans[q.id]||"";inp.placeholder="type your answer";inp.oninput=()=>{tp.ans[q.id]=inp.value;};inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&tp.i<tp.qs.length-1)tpNext();});w.appendChild(inp);A.append(w);}
