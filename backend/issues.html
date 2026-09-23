@@ -16,7 +16,7 @@ button{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:
 .iss .s{font-weight:600}.iss .n{color:var(--bad);font-size:13.5px;margin-top:5px}
 .empty{color:var(--muted);text-align:center;padding:30px}
 </style></head><body><div class="wrap">
-<h1>⚑ Reported issues</h1><p class="sub">Questions students flagged as wrong / unclear. Newest first.</p>
+<h1>⚑ Flags &amp; focus</h1><p class="sub">Questions students flagged, and who left the screen during Daily Duel / Drills.</p>
 <div class="card">
   <div class="two"><div><label>Worker URL</label><input id="api" placeholder="https://ipmat-arena.xxx.workers.dev"></div>
   <div><label>Admin key</label><input id="key" type="password" placeholder="ADMIN_KEY"></div></div>
@@ -29,11 +29,16 @@ $("#load").onclick=async()=>{
   const api=$("#api").value.trim().replace(/\/$/,''),key=$("#key").value.trim();
   if(!api||!key){$("#out").innerHTML='<div class="empty">Enter Worker URL + admin key.</div>';return;}
   $("#out").innerHTML='<div class="empty">Loading…</div>';
-  try{const r=await fetch(api+"/admin/issues",{headers:{"X-Admin-Key":key}});const j=await r.json();
+  try{const h={"X-Admin-Key":key};
+    const [j,sw]=await Promise.all([fetch(api+"/admin/issues",{headers:h}).then(r=>r.json()),fetch(api+"/admin/switches",{headers:h}).then(r=>r.json()).catch(()=>({ok:false}))]);
     if(!j.ok){$("#out").innerHTML='<div class="empty">'+(j.error||'failed')+'</div>';return;}
-    if(!j.issues.length){$("#out").innerHTML='<div class="empty">🎉 No open flags. Every question is clean.</div>';return;}
-    $("#out").innerHTML='<div class="card"><b>'+j.issues.length+' open flag(s)</b></div>'+j.issues.map(i=>
-      `<div class="iss"><div class="m">${i.created_at} · ${i.source||'—'} · ${i.qkey||''} · ${i.pin||''}</div><div class="s">${(i.stem||'').slice(0,220)}</div>${i.note?`<div class="n">“${i.note}”</div>`:''}</div>`).join("");
+    let html='<h2 style="font-size:18px;margin:6px 0 10px">⚑ Question flags</h2>';
+    html+= j.issues.length? j.issues.map(i=>
+      `<div class="iss"><div class="m">${i.created_at} · ${i.source||'—'} · ${i.qkey||''} · ${i.pin||''}</div><div class="s">${(i.stem||'').slice(0,220)}</div>${i.note?`<div class="n">“${i.note}”</div>`:''}</div>`).join("") : '<div class="empty">🎉 No open question flags.</div>';
+    html+='<h2 style="font-size:18px;margin:22px 0 10px">👁 Tab-switch flags (Daily Duel / Drills)</h2>';
+    html+= (sw.ok&&sw.switches&&sw.switches.length)? sw.switches.map(s=>
+      `<div class="iss" style="border-left-color:#ff9f1c"><div class="s">${s.name||s.pin} <span class="m" style="display:inline">· ${s.batch||''}</span></div><div class="m">left the screen <b>${s.n}×</b> · last ${s.last||''}</div></div>`).join("") : '<div class="empty">No tab-switches recorded — everyone stayed focused.</div>';
+    $("#out").innerHTML=html;
   }catch(e){$("#out").innerHTML='<div class="empty">'+e.message+'</div>';}
 };
 </script></body></html>

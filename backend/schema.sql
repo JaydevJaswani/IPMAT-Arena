@@ -88,6 +88,13 @@ CREATE TABLE IF NOT EXISTS issues (
   resolved INTEGER NOT NULL DEFAULT 0
 );
 
+-- Tab-switch / focus-loss events during Daily Duel & Drills (integrity signal).
+CREATE TABLE IF NOT EXISTS switches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pin TEXT, context TEXT, day TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Test completions — a test is taken once, then review-only.
 CREATE TABLE IF NOT EXISTS test_done (
   pin TEXT NOT NULL, test_id TEXT NOT NULL,

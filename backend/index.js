@@ -46,7 +46,9 @@ export default {
       if (p === "/plog")                 return plog(req, env);
       if (p === "/campaign")             return campaign(url, env);
       if (p === "/report")               return report(req, env);
+      if (p === "/switch")               return logSwitch(req, env);
       if (p === "/admin/issues")         return adminIssues(req, env);
+      if (p === "/admin/switches")       return adminSwitches(req, env);
       if (p === "/admin/upload-roster")  return uploadRoster(req, env);
       if (p === "/admin/upload-test")    return uploadTest(req, env);
       if (p === "/admin/roster-count")   return rosterCount(req, env);
@@ -333,6 +335,20 @@ async function adminIssues(req, env) {
   const r = await env.DB.prepare(
     "SELECT id,pin,qkey,source,stem,note,created_at FROM issues WHERE resolved=0 ORDER BY id DESC LIMIT 200").all();
   return json({ ok: true, issues: r.results });
+}
+async function logSwitch(req, env) {
+  const b = await req.json();
+  await env.DB.prepare("INSERT INTO switches (pin,context,day) VALUES (?,?,?)")
+    .bind(cleanPin(b.pin), String(b.context || "").slice(0, 60), b.day || new Date().toISOString().slice(0, 10)).run();
+  return json({ ok: true });
+}
+async function adminSwitches(req, env) {
+  if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
+  const r = await env.DB.prepare(
+    `SELECT s.pin, st.name, st.batch, COUNT(*) n, MAX(s.created_at) last
+     FROM switches s LEFT JOIN students st ON st.pin=s.pin
+     GROUP BY s.pin ORDER BY n DESC LIMIT 200`).all();
+  return json({ ok: true, switches: r.results });
 }
 
 // ---- admin ----

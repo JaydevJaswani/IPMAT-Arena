@@ -153,7 +153,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   <section id="practice" hidden></section>
   <section id="board" hidden>
     <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2></div>
-    <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily 10</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button><button class="tab" data-t="batch">Batch vs Batch</button></div>
+    <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily Duel</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button><button class="tab" data-t="batch">Batch vs Batch</button></div>
     <div class="card"><div class="league"><div class="crest">🏆</div><div><div class="nm">Gold League</div><div class="sub" id="leagueSub">Same 10 for everyone — fair by design.</div></div></div><div id="rows"></div></div>
     <p class="foot">IPMAT Arena · IMS Ahmedabad · <i>Trusted for Success</i></p>
   </section>
@@ -233,18 +233,32 @@ function show(id){["login","hub","quiz","results","tests","testplay","testresult
   $("#reportFab").hidden=!["quiz","testplay","extra","practice"].includes(id);
   window.scrollTo({top:0,behavior:"instant"});}
 $("#homeBtn").onclick=()=>openHub();
-/* tab-switch watch — notify on return during a question screen */
-let _leftAt=null,_tabSwitches=0;
-const _isTestScreen=()=>["quiz","testplay","practice","extra"].some(id=>{const e=$("#"+id);return e&&!e.hidden;});
+/* tab-switch watch — notify on return; log + auto-submit for Daily Duel & Drills */
+let _leftAt=null,_leftKind=null,_sw=0;
+function _activeKind(){if(!$("#quiz").hidden)return"duel";if(!$("#testplay").hidden)return"drill";if(!$("#practice").hidden||!$("#extra").hidden)return"soft";return null;}
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden){if(_isTestScreen())_leftAt=Date.now();}
-  else if(_leftAt!=null){const secs=Math.max(1,Math.round((Date.now()-_leftAt)/1000));_leftAt=null;_tabSwitches++;showTabWarn(secs);}
+  if(document.hidden){_leftKind=_activeKind();if(_leftKind)_leftAt=Date.now();}
+  else if(_leftAt!=null){const secs=Math.max(1,Math.round((Date.now()-_leftAt)/1000)),kind=_leftKind;_leftAt=null;_leftKind=null;
+    if(kind==="duel"||kind==="drill"){_sw++;
+      const ctx=kind==="drill"?("drill:"+((typeof tp!=="undefined"&&tp&&tp.id)||"")):"daily-duel";
+      if(ME)api("/switch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,context:ctx,day:today()})}).catch(()=>{});
+      if(_sw>=3)tabAutoSubmit(kind);
+      else showTabWarn(secs,_sw===2?"⚠️ One more switch and this auto-submits.":null,_sw);
+    } else showTabWarn(secs,null,0);
+  }
 });
-function showTabWarn(secs){
-  document.querySelectorAll(".tabwarn").forEach(n=>n.remove());
+function showTabWarn(secs,extra,n){
+  document.querySelectorAll(".tabwarn").forEach(x=>x.remove());
   const wrap=el("div","modal tabwarn");
-  wrap.innerHTML=`<div class="box"><h3>⚠️ You left the screen</h3><p>Away for ${secs}s. Switching tabs mid-practice is tracked — stay in the arena to keep your run clean.${_tabSwitches>1?` <b>(${_tabSwitches}× this session)</b>`:""}</p><div class="mbtns"><button class="btn sm" id="_tabOk" style="flex:1">Back to it →</button></div></div>`;
+  wrap.innerHTML=`<div class="box"><h3>⚠️ You left the screen</h3><p>Away for ${secs}s. Switching tabs mid-practice is tracked — stay in the arena to keep your run clean.${n>1?` <b>(${n}× this session)</b>`:""}${extra?`<br><b style="color:var(--bad)">${extra}</b>`:""}</p><div class="mbtns"><button class="btn sm" id="_tabOk" style="flex:1">Back to it →</button></div></div>`;
   document.body.appendChild(wrap);wrap.querySelector("#_tabOk").onclick=()=>wrap.remove();
+}
+function tabAutoSubmit(kind){
+  document.querySelectorAll(".tabwarn").forEach(x=>x.remove());
+  const wrap=el("div","modal tabwarn");
+  wrap.innerHTML=`<div class="box"><h3>⛔ Auto-submitted</h3><p>You left the screen 3 times. Your ${kind==="drill"?"drill":"Daily Duel"} was submitted automatically — that's the focus rule.</p><div class="mbtns"><button class="btn sm" id="_tabOk" style="flex:1">See result</button></div></div>`;
+  document.body.appendChild(wrap);wrap.querySelector("#_tabOk").onclick=()=>wrap.remove();
+  if(kind==="duel")finishDaily();else if(typeof tpSubmit==="function")tpSubmit();
 }
 /* login */
 async function doLogin(){const pin=($("#pin").value||"").trim().toUpperCase(),out=$("#loginOut");
@@ -257,7 +271,7 @@ async function doLogin(){const pin=($("#pin").value||"").trim().toUpperCase(),ou
 $("#loginBtn").onclick=doLogin;$("#pin").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
 /* HUB */
 function updateStreakPill(n){const p=$("#topStreak");p.hidden=false;p.innerHTML=`🔥 <b>${n}</b>`;}
-const COACH=["Miss a day and the streak resets. Don't hand me that excuse.","Your mistakes are the map. Go reconquer them.","Ranks are earned before 9am. Get your Daily 10 in.","Speed is a skill. Solve, don't stare."];
+const COACH=["Miss a day and the streak resets. Don't hand me that excuse.","Your mistakes are the map. Go reconquer them.","Ranks are earned before 9am. Get your Daily Duel in.","Speed is a skill. Solve, don't stare."];
 async function openHub(){
   show("hub");const h=$("#hub");
   h.innerHTML=`<div class="hero"><div class="eyebrow">Welcome back</div><h1>${ME.name.split(" ")[0]}.</h1><p class="sub">Batch ${ME.batch} · Gold League.</p>
@@ -266,7 +280,7 @@ async function openHub(){
     <div class="score2"><div class="bigstat cp"><div class="h">⚔️ Conquest Points</div><div class="v tnum" id="hCP">—</div><div class="subv" id="hCPsub">solving score · harder = more</div></div>
       <div class="bigstat cb"><div class="h">↺ Comeback Index</div><div class="v tnum" id="hCB">—</div><div class="subv" id="hCBsub">mistakes reconquered</div></div></div>
     <div class="tiles">
-      <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily 10</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
+      <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily Duel</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
       <button class="tile map" id="tConquest"><span class="ic">🗺️</span><span><span class="tt">Conquest</span><span class="ts">Warm up &amp; grind · unlimited practice, level by level</span></span><span class="go">→</span></button>
       <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Reconquer</span><span class="ts">Only the questions you got wrong</span></span><span class="go" id="extraGo">→</span></button>
       <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Curated topic tests · take once</span></span><span class="go">→</span></button>
@@ -293,7 +307,7 @@ function renderAreas(mastery){
   const box=$("#areaCard"),cp={};SYLLABUS.forEach(([f])=>cp[f]=0);
   (mastery||[]).forEach(x=>{const f=FAMILY[x.topic];if(f)cp[f]+=(x.solved||0)*(TW[x.tier]||1);});
   const max=Math.max(1,...Object.values(cp)),tot=Object.values(cp).reduce((a,b)=>a+b,0);
-  box.innerHTML=(tot===0?`<div class="empty" style="padding:8px 0 14px">Start a Conquest or Daily 10 — your points build up by area here.</div>`:"")
+  box.innerHTML=(tot===0?`<div class="empty" style="padding:8px 0 14px">Start a Conquest or Daily Duel — your points build up by area here.</div>`:"")
     +SYLLABUS.map(([f])=>{const v=cp[f]||0,pc=Math.round(v/max*100);
     return `<div style="display:flex;align-items:center;gap:11px;margin:9px 0"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">${f}</div><div class="bar" style="margin-top:5px;height:7px"><i style="width:${pc}%"></i></div></div><div class="mono" style="font-weight:700;color:var(--violet);width:36px;text-align:right">${v}</div></div>`;}).join("");
 }
@@ -408,7 +422,7 @@ function buildDaily(){RNG=mulberry32(seedFor("daily-"+today()));
   const byTier=t=>G.filter(g=>g.tier===t),want=[["Warm-Up",4],["Exam-Relevant",3],["Heavy & Tricky",3]],chosen=[];
   want.forEach(([t,c])=>{const pool=shuffle(byTier(t));for(let i=0;i<c;i++)chosen.push(pool[i%pool.length]);});
   deck=chosen.map(g=>({...g.make(),topic:g.topic,tier:g.tier,genId:g.id}));RNG=Math.random;cur=0;frontier=0;dAns=[];}
-function startDaily(){buildDaily();show("quiz");tLeft=720;renderDaily();if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);}
+function startDaily(){_sw=0;buildDaily();show("quiz");tLeft=720;renderDaily();if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);}
 function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);t.classList.remove("paused");if(tLeft<=0){clearInterval(timerId);finishDaily();}tLeft--;}
 function ddots(){const box=$("#dots");box.innerHTML="";deck.forEach((q,i)=>{const s=el("i");if(dAns[i])s.classList.add(dAns[i].correct?"done":"wrong");else if(i===cur)s.classList.add("now");box.appendChild(s);});}
 function renderDaily(){const q=deck[cur],answered=!!dAns[cur];ddots();
@@ -445,7 +459,7 @@ async function finishDaily(){clearInterval(timerId);
   const cutPct=64,myPct=Math.min(98,Math.round(acc*0.9+(myScore>0?10:0))),weeks=myPct>=cutPct?"You're above the line. Stay there.":Math.max(2,Math.ceil((cutPct-myPct)/6))+" weeks at this pace to clear the cutoff.";
   const rankLine=srv.rank?`#${srv.rank}${srv.of?" of "+srv.of:""} today · `:"";
   const cpGain=deck.reduce((sm,q,i)=>sm+((dAns[i]&&dAns[i].correct)?(TW[q.tier]||1):0),0);
-  const s=$("#results");s.innerHTML="";s.append(el("div","section-h","<h2>Daily 10 · done</h2><span class='link' id='toBoard'>Leaderboard →</span>"));
+  const s=$("#results");s.innerHTML="";s.append(el("div","section-h","<h2>Daily Duel · done</h2><span class='link' id='toBoard'>Leaderboard →</span>"));
   const c=el("div","card pop");c.innerHTML=`<div class="scorebig tnum">${myScore}<span class="slash"> / 40</span></div><div class="resline">${rankLine}${right}/10 correct · ${acc}%</div>
     <div class="rewards"><div class="reward xp"><div class="n tnum">+${cpGain}</div><div class="l">Conquest pts</div></div><div class="reward st"><div class="n tnum">${srv.streak} ${srv.streak===1?"day":"days"}</div><div class="l">Streak</div></div></div>
     <div class="badges">${badges.map(b=>`<span class="badge"><span class="e">${b[0]}</span>${b[1]}</span>`).join("")}</div>
@@ -458,7 +472,7 @@ async function finishDaily(){clearInterval(timerId);
 let ex={list:[],i:0,items:[],sel:null,answered:false};
 async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let r;try{r=await api("/extra?pin="+encodeURIComponent(ME.pin));}catch(e){s.querySelector(".card").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
-  if(!r.ok||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily 10 to find your next challenge.</div></div>`;return;}
+  if(!r.ok||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily Duel to find your next challenge.</div></div>`;return;}
   ex={list:r.wrongs.slice(0,10),i:0,items:[],sel:null,answered:false};exRender();}
 function exRender(){const s=$("#extra");const w=ex.list[ex.i];const gen=w.gen_id&&GBYID[w.gen_id]?GBYID[w.gen_id]:genForTopic(w.topic);
   if(!ex.cur||ex.curKey!==w.qkey){ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curKey=w.qkey;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
@@ -501,7 +515,7 @@ async function openTests(){show("tests");const box=$("#testList");box.innerHTML=
       b.onclick=()=>done?openReview(t.id):openTest(t.id);box.appendChild(b);});
   }catch(e){box.innerHTML=`<div class="empty">Couldn't load tests.</div>`;}}
 let tp={id:null,name:"",qs:[],i:0,ans:{}};
-async function openTest(id){show("testplay");$("#tpText").innerHTML="";$("#tpAnswers").innerHTML=`<div class="spin"></div>`;$("#tpMeta").innerHTML="";$("#tpBtns").innerHTML="";
+async function openTest(id){_sw=0;show("testplay");$("#tpText").innerHTML="";$("#tpAnswers").innerHTML=`<div class="spin"></div>`;$("#tpMeta").innerHTML="";$("#tpBtns").innerHTML="";
   try{const r=await api("/test?id="+encodeURIComponent(id));if(!r.ok){$("#tpAnswers").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
     tp={id,name:r.test.name,qs:r.questions,i:0,ans:{}};tpShow();
   }catch(e){$("#tpAnswers").innerHTML=`<div class="empty">Network error.</div>`;}}
@@ -550,7 +564,7 @@ async function openBoard(type){show("board");[...$("#tabs").children].forEach(t=
   const box=$("#rows");box.innerHTML=`<div class="spin"></div>`;
   const subs={daily:"Same 10 for everyone — fair by design.",accuracy:"Ranked by % correct — climbers welcome.",streak:"Longest active streak wins.",batch:"Batch average — carry your squad."};$("#leagueSub").textContent=subs[type]||"";
   try{const r=await api("/leaderboard?type="+type+"&day="+today()+"&pin="+encodeURIComponent(ME.pin));
-    if(!r.ok||!r.rows.length){box.innerHTML=`<div class="empty">No scores yet today.<br>Be the first — play the Daily 10.</div>`;return;}
+    if(!r.ok||!r.rows.length){box.innerHTML=`<div class="empty">No scores yet today.<br>Be the first — play the Daily Duel.</div>`;return;}
     box.innerHTML="";r.rows.forEach((p,i)=>{const you=p.name===ME.name||(type==="batch"&&p.batch===ME.batch);
       const rw=el("div","row"+(you?" you":"")+(i<3?" top3":""));
       const av=you?`<span class="av">${AV_WARRIOR}</span>`:`<span class="av" style="background:${AVC[i%AVC.length]}">${(p.name||"?")[0]}</span>`;
