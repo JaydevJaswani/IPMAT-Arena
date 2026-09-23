@@ -37,7 +37,7 @@ def parse(text):
             if ans and re.fullmatch(r"[A-Da-d]", ans.strip()):
                 hit = dict(options).get(ans.strip().upper())
                 if hit: answer = display = hit
-        elif ans and not re.fullmatch(r"-?\d+(\.\d+)?", ans.replace(" ", "")):
+        elif ans and not re.fullmatch(r"-?\d+", ans.replace(" ", "")):
             typ = "short"
         if not ans: mode = "open"
         qs.append({"stem": " ".join(stem), "type": typ, "mode": mode, "options": opts,

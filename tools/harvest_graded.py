@@ -65,7 +65,7 @@ def harvest(path, topic):
                 stem = re.sub(r"\s+", " ", m.group(2)).strip(); val = re.sub(r"\s+", " ", m.group(3)).strip()
                 if len(stem) < 8 or len(val) > 30:
                     continue
-                numeric = bool(re.fullmatch(r"-?\d+(\.\d+)?", val))
+                numeric = bool(re.fullmatch(r"-?\d+", val))  # TITA only for whole numbers
                 bank.append({"topic": topic, "level": "L1", "tier": "Warm-Up",
                              "type": "int" if numeric else "short", "mode": "auto" if numeric else "open",
                              "stem": stem, "options": None, "answer": val, "answer_display": val,

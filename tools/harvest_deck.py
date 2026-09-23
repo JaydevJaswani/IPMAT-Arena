@@ -51,7 +51,7 @@ def harvest(path, topic, level):
                 sol = re.sub(r"\s+", " ", t); break
         val = ans.split("=")[-1].strip() if "=" in ans else ans
         val = re.sub(r"\b(years?|cm|m|kmph|km/h|units?|Rs\.?)\b", "", val).strip()
-        numeric = bool(re.fullmatch(r"-?\d+(\.\d+)?", val))
+        numeric = bool(re.fullmatch(r"-?\d+", val))
         out.append({"topic": topic, "level": level, "tier": L2T.get(level, "Exam-Relevant"),
                     "type": "int" if numeric else "short", "mode": "auto" if numeric or re.fullmatch(r"[0-9√/().+\-·^² ]+", val) else "open",
                     "stem": stem, "options": None, "answer": val, "answer_display": ans,

@@ -30,7 +30,12 @@ for f in files:
         seen.add(k)
         topic = TOPIC.get(q.get("topic", ""), q.get("topic", "Number System"))
         tier = q.get("tier", "Exam-Relevant")
-        rows.append({"topic": topic, "tier": tier, "type": q.get("type", "int"),
+        # RULE: a TITA (type-in / 'int') must have a WHOLE-NUMBER answer.
+        # If not whole (decimal / fraction / symbol): make it MCQ when options exist, else short-answer.
+        typ = q.get("type", "int"); ans = str(q.get("answer", "")).strip(); opts = q.get("options")
+        if typ == "int" and not re.fullmatch(r"-?\d+", ans):
+            typ = "mcq" if opts else "short"
+        rows.append({"topic": topic, "tier": tier, "type": typ,
                      "mode": q.get("mode", "auto"), "stem": stem,
                      "options": q.get("options"), "answer": str(q.get("answer", "")),
                      "answer_display": str(q.get("answer_display", q.get("answer", ""))),
