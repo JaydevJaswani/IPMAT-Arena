@@ -88,6 +88,14 @@ CREATE TABLE IF NOT EXISTS issues (
   resolved INTEGER NOT NULL DEFAULT 0
 );
 
+-- Conquest level attempts — each level is a one-shot 10-Q run, then locked/review-only.
+CREATE TABLE IF NOT EXISTS lattempts (
+  pin TEXT, topic TEXT, level TEXT,
+  correct INTEGER, total INTEGER, detail TEXT,   -- detail = JSON of the 10 Qs + given answers
+  done_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (pin, topic, level)
+);
+
 -- Tab-switch / focus-loss events during Daily Duel & Drills (integrity signal).
 CREATE TABLE IF NOT EXISTS switches (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

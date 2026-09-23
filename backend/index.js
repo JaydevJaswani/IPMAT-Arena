@@ -45,6 +45,8 @@ export default {
       if (p === "/pgrade")               return pgrade(req, env);
       if (p === "/plog")                 return plog(req, env);
       if (p === "/campaign")             return campaign(url, env);
+      if (p === "/level-save")           return levelSave(req, env);
+      if (p === "/level-review")         return levelReview(url, env);
       if (p === "/report")               return report(req, env);
       if (p === "/switch")               return logSwitch(req, env);
       if (p === "/admin/issues")         return adminIssues(req, env);
@@ -162,9 +164,10 @@ async function leaderboard(url, env) {
       `SELECT s.name, s.batch, a.score, a.time_sec FROM attempts a JOIN students s ON s.pin=a.pin
        WHERE a.day = ? ORDER BY a.score DESC, a.time_sec ASC LIMIT 50`).bind(day).all()).results;
   } else if (type === "accuracy") {
+    // accuracy across ALL answered questions (daily + practice + drills), min 10 attempted
     rows = (await env.DB.prepare(
-      `SELECT s.name, s.batch, ROUND(100.0*SUM(a.correct)/SUM(a.total)) score
-       FROM attempts a JOIN students s ON s.pin=a.pin GROUP BY a.pin HAVING SUM(a.total)>=20
+      `SELECT s.name, s.batch, ROUND(100.0*SUM(q.correct)/COUNT(*)) score
+       FROM q_log q JOIN students s ON s.pin=q.pin GROUP BY q.pin HAVING COUNT(*)>=10
        ORDER BY score DESC LIMIT 50`).all()).results;
   } else if (type === "streak") {
     rows = (await env.DB.prepare(
@@ -319,7 +322,21 @@ async function campaign(url, env) {
     "SELECT topic,tier,COALESCE(SUM(correct),0) solved,COUNT(*) seen FROM q_log WHERE pin=? GROUP BY topic,tier").bind(pin).all()).results;
   const pool = (await env.DB.prepare(
     "SELECT topic,tier,COUNT(*) n FROM questions WHERE test_id='practice' GROUP BY topic,tier").all()).results;
-  return json({ ok: true, progress: rows, thresholds: CLEAR, pool });
+  const done = (await env.DB.prepare("SELECT topic,level FROM lattempts WHERE pin=?").bind(pin).all()).results;
+  return json({ ok: true, progress: rows, thresholds: CLEAR, pool, done });
+}
+async function levelSave(req, env) {
+  const b = await req.json();
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO lattempts (pin,topic,level,correct,total,detail) VALUES (?,?,?,?,?,?)")
+    .bind(cleanPin(b.pin), b.topic, b.level, b.correct | 0, b.total | 0, JSON.stringify(b.detail || [])).run();
+  return json({ ok: true });
+}
+async function levelReview(url, env) {
+  const pin = cleanPin(url.searchParams.get("pin")), t = url.searchParams.get("topic"), l = url.searchParams.get("level");
+  const r = await env.DB.prepare("SELECT correct,total,detail FROM lattempts WHERE pin=? AND topic=? AND level=?").bind(pin, t, l).first();
+  if (!r) return json({ ok: false }, 404);
+  return json({ ok: true, correct: r.correct, total: r.total, detail: JSON.parse(r.detail || "[]") });
 }
 
 // student flags a bad question

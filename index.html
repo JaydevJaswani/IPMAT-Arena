@@ -89,6 +89,11 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .track{height:14px;border-radius:999px;background:var(--card2);border:1.5px solid var(--line);position:relative;overflow:hidden}.fillbar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--green),var(--amber),var(--primary));width:0;transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
 .cut{position:absolute;top:-6px;bottom:-6px;width:2.5px;background:var(--ink);z-index:2}.cut b{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap;font-weight:800}.aspire .msg{font-size:14.5px;color:var(--primary);font-weight:700;margin-top:15px}
 .tcard{display:flex;align-items:center;gap:14px;text-align:left;width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow);margin-bottom:10px}.tcard .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:color-mix(in srgb,var(--violet) 12%,#fff);flex:none}.tcard .tt{font-family:var(--disp);font-weight:800;font-size:16px}.tcard .ts{font-size:12.5px;color:var(--muted)}.tcard .go{margin-left:auto;color:var(--faint);font-size:20px}.tcard .cpill{margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:color-mix(in srgb,var(--green) 15%,#fff);color:var(--good)}
+#testList{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+#testList .tcard{flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:0;height:100%}
+#testList .tcard .go,#testList .tcard .cpill{margin-left:0}
+.rival{display:flex;align-items:center;gap:10px;background:linear-gradient(120deg,color-mix(in srgb,var(--blue) 12%,#fff),#fff);border:1.5px solid color-mix(in srgb,var(--blue) 35%,transparent);border-radius:13px;padding:11px 14px;margin-bottom:12px;font-weight:600;font-size:14px}
+.rival b{color:var(--blue)}.rival .gap{margin-left:auto;font-family:var(--mono);font-weight:700;color:var(--primary);white-space:nowrap}
 .tabs{display:flex;gap:6px;margin:2px 0 14px;overflow-x:auto}.tab{white-space:nowrap;font-size:13.5px;font-weight:700;padding:9px 14px;border-radius:999px;border:1.5px solid var(--line);color:var(--muted);background:#fff}.tab.on{color:#fff;background:var(--primary);border-color:var(--primary)}
 .league{display:flex;align-items:center;gap:12px;margin-bottom:14px}.crest{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;font-size:26px;background:linear-gradient(135deg,#FFE08A,#FFB800);box-shadow:0 8px 18px -8px var(--gold)}.league .nm{font-family:var(--disp);font-weight:800;font-size:20px}.league .sub{font-size:12.5px;color:var(--muted)}
 .row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:13px;border:1.5px solid transparent}.row+.row{margin-top:3px}.row .rk{font-family:var(--mono);font-weight:700;width:26px;text-align:right;color:var(--muted)}.row .av{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-family:var(--disp);color:#fff;font-size:14px;overflow:hidden}.row .who{flex:1;min-width:0}.row .who .n{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row .who .bt{font-size:11.5px;color:var(--faint);font-family:var(--mono)}.row .sc{font-family:var(--mono);font-weight:700;font-size:16px}.row.you{background:linear-gradient(90deg,color-mix(in srgb,var(--primary) 12%,#fff),#fff);border-color:var(--primary)}.row.top3 .rk{color:var(--gold)}
@@ -222,7 +227,7 @@ const SYLLABUS=[
  ["Geometry & Mensuration",["Triangles & Polygons","Circles","Coordinate Geometry","Mensuration","Trigonometry"]],
  ["Modern Math",["Permutations & Combinations","Probability","Set Theory & Venn","Matrices & Determinants"]],
  ["Data Interpretation",["Data Interpretation"]]];
-let CAMPAIGN={thr:{L1:10,L2:10,L3:10},solved:{},poolCov:new Set()};
+let CAMPAIGN={done:new Set(),poolCov:new Set()};
 /* report issue */
 let currentQ=null;
 const setReportCtx=(qkey,source,stem)=>{currentQ={qkey,source,stem};};
@@ -333,28 +338,27 @@ function openConquest(){show("conquest");const s=$("#conquest");
 async function loadCampaign(){
   const box=$("#mapWrap");
   let d;try{d=await api("/campaign?pin="+encodeURIComponent(ME.pin));}catch(e){box.innerHTML=`<div class="empty">Map unavailable.</div>`;return;}
-  const thr=d.thresholds||{L1:10,L2:10,L3:10},solved={},poolCov=new Set();
-  (d.progress||[]).forEach(r=>solved[r.topic+"|"+TIERLVL[r.tier]]=r.solved);
+  const done=new Set(),poolCov=new Set();
+  (d.done||[]).forEach(r=>done.add(r.topic+"|"+r.level));
   (d.pool||[]).forEach(r=>poolCov.add(r.topic+"|"+TIERLVL[r.tier]));
-  CAMPAIGN={thr,solved,poolCov};
+  CAMPAIGN={done,poolCov};
   let html="";
   SYLLABUS.forEach(([fam,topics])=>{
     html+=`<div class="fam">${fam}</div>`;
     topics.forEach(tp=>{
       let chainOK=true;
       const cells=["L1","L2","L3"].map(L=>{
-        const has=genCov.has(tp+"|"+L)||poolCov.has(tp+"|"+L);
-        const sv=solved[tp+"|"+L]||0,tgt=thr[L],cleared=has&&sv>=tgt;
+        const has=genCov.has(tp+"|"+L)||poolCov.has(tp+"|"+L),isDone=done.has(tp+"|"+L);
         let state;
         if(!has)state="soon";
-        else{state=cleared?"cleared":(chainOK?"open":"locked");chainOK=chainOK&&cleared;}
-        return {L,has,sv,tgt,state};
+        else{state=isDone?"cleared":(chainOK?"open":"locked");chainOK=chainOK&&isDone;}
+        return {L,state};
       });
       html+=`<div class="trow"><div class="tn">${tp}</div><div class="nodes">`+cells.map(c=>{
         if(c.state==="soon")return `<div class="node soon">${LVLNAME[c.L]}<small>soon</small></div>`;
         if(c.state==="locked")return `<div class="node">🔒<small>${LVLNAME[c.L]}</small></div>`;
         if(c.state==="cleared")return `<button class="node cleared" data-t="${tp}" data-l="${c.L}">⭐<small>${LVLNAME[c.L]}</small></button>`;
-        return `<button class="node open" data-t="${tp}" data-l="${c.L}">${c.sv}/${c.tgt}<small>${LVLNAME[c.L]}</small></button>`;
+        return `<button class="node open" data-t="${tp}" data-l="${c.L}">▶<small>${LVLNAME[c.L]}</small></button>`;
       }).join("")+`</div></div>`;
     });
   });
@@ -364,29 +368,30 @@ async function loadCampaign(){
 /* ---------- PRACTICE RUNNER (untimed campaign) ---------- */
 let PS=null;
 async function openPractice(topic,level){
+  if(CAMPAIGN.done.has(topic+"|"+level)){openLevelReview(topic,level);return;}
   const backing=genCov.has(topic+"|"+level)?"gen":"static";
-  PS={topic,level,tier:LVLTIER[level],backing,target:CAMPAIGN.thr[level]||6,solved:CAMPAIGN.solved[topic+"|"+level]||0,pool:[],pi:0,cur:null,answered:false,sel:null};
+  PS={topic,level,tier:LVLTIER[level],backing,i:0,total:10,correct:0,detail:[],pool:[],cur:null,answered:false,sel:null};
   show("practice");
   if(backing==="static"){
     $("#practice").innerHTML=`<div class="spin"></div>`;
-    try{const r=await api("/practice?topic="+encodeURIComponent(topic)+"&level="+level);PS.pool=r.questions||[];}catch(e){}
+    try{const r=await api("/practice?topic="+encodeURIComponent(topic)+"&level="+level);PS.pool=shuffle(r.questions||[]);}catch(e){}
     if(!PS.pool.length){$("#practice").innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic}</h2><span class="link" id="pBack">← Map</span></div><div class="card"><div class="empty">No questions here yet — coming soon.</div></div>`;$("#pBack").onclick=openHub;return;}
-    PS.pool=shuffle(PS.pool);
+    PS.total=Math.min(10,PS.pool.length);
   }
   pNext();
 }
 function pBuildQ(){
   if(PS.backing==="gen"){const g=pick(genByTL(PS.topic,PS.level));const q=g.make();q.topic=PS.topic;q.tier=PS.tier;q._gen=g.id;return q;}
-  const s=PS.pool[PS.pi%PS.pool.length];PS.pi++;
+  const s=PS.pool[PS.i%PS.pool.length];
   return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};
 }
-function pNext(){PS.cur=pBuildQ();PS.answered=false;PS.sel=null;pRender();}
+function pNext(){if(PS.i>=PS.total){pFinish();return;}PS.cur=pBuildQ();PS.answered=false;PS.sel=null;pRender();}
 function pRender(){
   const q=PS.cur,s=$("#practice"),stem=q.q||q.stem;
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
-  const pct=Math.min(100,Math.round(PS.solved/PS.target*100));
+  const pct=Math.round(PS.i/PS.total*100);
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${PS.topic}</h2><span class="link" id="pBack">← Map</span></div>
-    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">${PS.solved}/${PS.target} · ${LVLNAME[PS.level]}</div></div>
+    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Q ${PS.i+1}/${PS.total} · ${LVLNAME[PS.level]}</div></div>
     <div class="card"><div class="qmeta"><span class="chip t">${PS.topic}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span></div>
     <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
   $("#pBack").onclick=openHub;const A=$("#pA");
@@ -398,8 +403,7 @@ function pRender(){
   if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
   const B=$("#pB");
   if(!PS.answered){const c=el("button","btn","Check");c.onclick=pCheck;B.appendChild(c);}
-  else if(PS.solved>=PS.target){const done=el("button","btn","⭐ Level cleared →");done.onclick=pCleared;B.appendChild(done);}
-  else{const n=el("button","btn","Next question →");n.onclick=pNext;B.appendChild(n);}
+  else{const last=PS.i>=PS.total-1,n=el("button","btn",last?"Finish level →":"Next question →");n.onclick=()=>{PS.i++;pNext();};B.appendChild(n);}
 }
 async function pCheck(){
   const q=PS.cur;let given;
@@ -409,17 +413,35 @@ async function pCheck(){
   if(PS.backing==="gen"){correct=(q.kind==="mcq"?given===q.answer:Number(given)===Number(q.answer));correctAns=q.answer;sol=q.sol;
     api("/plog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:[{genId:q._gen,topic:PS.topic,tier:PS.tier,correct}]})}).catch(()=>{});}
   else{try{const r=await api("/pgrade",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,items:[{id:q._static,given}]})});const d=(r.detail&&r.detail[0])||{};correct=!!d.correct;correctAns=d.answer;sol=d.solution;}catch(e){}}
-  PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;if(correct)PS.solved++;pRender();
+  PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;if(correct)PS.correct++;
+  PS.detail.push({stem:q.q||q.stem,options:q.kind==="mcq"?q.options:null,given,correct,answer:correctAns,solution:sol});
+  pRender();
 }
-function pCleared(){
-  const s=$("#practice"),nextL={L1:"L2",L2:"L3",L3:null}[PS.level];
-  const nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL));
-  CAMPAIGN.solved[PS.topic+"|"+PS.level]=PS.solved;
-  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level cleared</h2><span class="link" id="pHome">← Map</span></div>
-    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${PS.topic} · ${LVLNAME[PS.level]} conquered</div>
-    <div style="color:var(--muted);margin-top:6px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"Top tier here — you're a legend. More coming."}</div>
-    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center">${nextHas?`<button class="btn sm" id="pNextL">Take on ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pHome2">Back to map</button></div></div>`;
-  $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);
+async function pFinish(){
+  const s=$("#practice");
+  try{await api("/level-save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,correct:PS.correct,total:PS.total,detail:PS.detail})});}catch(e){}
+  CAMPAIGN.done.add(PS.topic+"|"+PS.level);
+  const nextL={L1:"L2",L2:"L3",L3:null}[PS.level],nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL)),acc=Math.round(PS.correct/PS.total*100);
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level done</h2><span class="link" id="pHome">← Map</span></div>
+    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${PS.topic} · ${LVLNAME[PS.level]} cleared</div>
+    <div class="resline">${PS.correct}/${PS.total} correct · ${acc}%</div>
+    <div style="color:var(--muted);margin-top:8px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"That's the top tier here — legend."} These 10 are now locked — review them anytime.</div>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextHas?`<button class="btn sm" id="pNextL">Take ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pReview">Review</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
+  $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);$("#pReview").onclick=()=>openLevelReview(PS.topic,PS.level);
+}
+async function openLevelReview(topic,level){
+  show("practice");const s=$("#practice");s.innerHTML=`<div class="spin"></div>`;
+  let r;try{r=await api("/level-review?pin="+encodeURIComponent(ME.pin)+"&topic="+encodeURIComponent(topic)+"&level="+level);}catch(e){}
+  if(!r||!r.ok){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic}</h2><span class="link" id="pB2">← Map</span></div><div class="card"><div class="empty">Couldn't load review.</div></div>`;$("#pB2").onclick=openHub;return;}
+  const acc=r.total?Math.round(r.correct/r.total*100):0;
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic} · ${LVLNAME[level]}</h2><span class="link" id="pHome">← Map</span></div>
+    <div class="card"><div style="font-weight:800">✓ Level complete — review only</div><div class="resline">${r.correct}/${r.total} correct · ${acc}%. These questions are locked; you can't re-answer them.</div></div>`;
+  r.detail.forEach((d,i)=>{const card=el("div","card");card.style.marginTop="10px";
+    card.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><b class="mono" style="color:var(--faint)">Q${i+1}</b>${d.correct?`<span class="chip warm">✓ you: ${d.given}</span>`:`<span class="chip heavy">✗ you: ${d.given||"—"}</span>`}</div>
+      <div style="font-family:var(--disp);font-weight:600;line-height:1.3">${d.stem}</div>
+      <div class="fb" style="margin-top:12px"><div class="tag">Answer</div><div class="ans">${d.answer||"—"}</div>${d.solution?`<div class="sol">${d.solution}</div>`:""}</div>`;
+    s.append(card);});
+  $("#pHome").onclick=openHub;
 }
 /* ---------- generic answer feedback ---------- */
 function fbBlock(correct,marks,q){const fb=el("div","fb "+(correct?"ok":"no")+" pop");
@@ -480,17 +502,19 @@ async function finishDaily(){clearInterval(timerId);
   const miss=10-right;const c2=el("div","card");c2.style.marginTop="14px";c2.innerHTML=`<div style="font-weight:800;margin-bottom:4px">${right>=8?"Big day. The board's about to feel it.":right>=5?"Solid. Go steal some ranks.":"Rough round — the streak lives."}</div><div style="color:var(--muted);font-size:14px">${miss>0?`You missed ${miss}. `:""}Fix them in <span class="link" id="toExtra" style="cursor:pointer">Reconquer →</span></div>`;
   s.append(c2);show("results");setTimeout(()=>{const f=$("#fill");if(f)f.style.width=myPct+"%";},160);
   $("#toBoard").onclick=()=>openBoard("daily");$("#toExtra").onclick=openExtra;}
-/* ---------- EXTRA PRACTICE ---------- */
-let ex={list:[],i:0,items:[],sel:null,answered:false};
+/* ---------- RECONQUER (3 variants per missed question) ---------- */
+let ex={list:[],i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};
 async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let r;try{r=await api("/extra?pin="+encodeURIComponent(ME.pin));}catch(e){s.querySelector(".card").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
   if(!r.ok||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily Duel to find your next challenge.</div></div>`;return;}
-  ex={list:r.wrongs.slice(0,10),i:0,items:[],sel:null,answered:false};exRender();}
-function exRender(){const s=$("#extra");const w=ex.list[ex.i];const gen=w.gen_id&&GBYID[w.gen_id]?GBYID[w.gen_id]:genForTopic(w.topic);
-  if(!ex.cur||ex.curKey!==w.qkey){ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curKey=w.qkey;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
-  setReportCtx(w.qkey,"extra",ex.cur.q);
-  const q=ex.cur;s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="mono" style="font-size:12px;color:var(--faint)">${ex.i+1} / ${ex.list.length}</span></div>
-    <div class="card"><div style="font-size:12.5px;color:var(--green);font-weight:800;margin-bottom:8px">↺ REMATCH · same idea, new numbers</div>
+  ex={list:r.wrongs.slice(0,5),i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};exRender();}
+function exGen(){const w=ex.list[ex.i];return (w.gen_id&&GBYID[w.gen_id])?GBYID[w.gen_id]:genForTopic(w.topic);}
+function exRender(){const s=$("#extra"),w=ex.list[ex.i];
+  if(!ex.cur){const gen=exGen();ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
+  setReportCtx(w.qkey,"extra",ex.cur.q);const q=ex.cur;
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="mono" style="font-size:12px;color:var(--faint)">mistake ${ex.i+1} / ${ex.list.length}</span></div>
+    <div class="card"><div style="font-size:12.5px;color:var(--green);font-weight:800;margin-bottom:8px">↺ REMATCH ${ex.v+1} of 3 · same idea, new numbers</div>
+    <div class="pmeter" style="margin-bottom:12px"><div class="rg"><i style="width:${Math.round(((ex.v)+(ex.answered?1:0))/3*100)}%"></i></div><div class="lbl">${ex.setCorrect}/3 right — need 2 to clear</div></div>
     <div class="qmeta"><span class="chip t">${q.topic}</span><span class="chip ${tierClass(q.tier)}">${q.tier||"Practice"}</span></div>
     <div class="qtext">${q.q}</div><div class="answers" id="exA"></div><div id="exFb"></div><div class="navrow" id="exBtns"></div></div>`;
   const A=$("#exA");
@@ -502,20 +526,21 @@ function exRender(){const s=$("#extra");const w=ex.list[ex.i];const gen=w.gen_id
   if(ex.answered)$("#exFb").appendChild(fbBlock(ex.lastCorrect,null,q));
   const btns=$("#exBtns");
   if(!ex.answered){const lk=el("button","btn","Check");lk.onclick=exLock;btns.appendChild(lk);}
-  else{const n=el("button","btn",ex.i<ex.list.length-1?"Next →":"Finish");n.onclick=exNext;btns.appendChild(n);}}
-function exLock(){const q=ex.cur;let given,correct;
-  if(q.kind==="mcq"){if(ex.sel==null)return;given=ex.sel;correct=(ex.sel===q.answer);}
+  else{const lastV=ex.v>=2,lastW=ex.i>=ex.list.length-1,label=lastV?(lastW?"Finish":"Next mistake →"):"Next variant →";const n=el("button","btn",label);n.onclick=exNext;btns.appendChild(n);}}
+function exLock(){const q=ex.cur;let correct;
+  if(q.kind==="mcq"){if(ex.sel==null)return;correct=(ex.sel===q.answer);}
   else{const v=($("#exNum").value||"").trim();if(v==="")return;ex.sel=v;correct=(Number(v)===Number(q.answer));}
-  ex.answered=true;ex.lastCorrect=correct;
-  ex.items.push({qkey:ex.list[ex.i].qkey,genId:ex.curGen,topic:q.topic,tier:q.tier,correct});exRender();}
-async function exNext(){if(ex.i<ex.list.length-1){ex.i++;ex.cur=null;exRender();return;}
+  ex.answered=true;ex.lastCorrect=correct;if(correct)ex.setCorrect++;exRender();}
+async function exNext(){
+  if(ex.v<2){ex.v++;ex.cur=null;exRender();return;}
+  const w=ex.list[ex.i];ex.items.push({qkey:w.qkey,genId:ex.curGen,topic:w.topic,tier:w.tier,correct:ex.setCorrect>=2});
+  if(ex.i<ex.list.length-1){ex.i++;ex.v=0;ex.setCorrect=0;ex.cur=null;exRender();return;}
   const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let resolved=0;try{const r=await api("/redo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:ex.items})});if(r.ok)resolved=r.resolved;}catch(e){}
-  const right=ex.items.filter(i=>i.correct).length;
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquered</h2><span class="link" id="exHome">← Home</span></div>
-    <div class="card pop"><div class="scorebig tnum">${resolved}</div><div class="resline">${right}/${ex.items.length} correct · ${resolved} mistake${resolved===1?"":"s"} cleared from your list</div>
-    <div style="margin-top:14px;color:var(--muted);font-size:14px">${resolved>0?"That's Comeback Index climbing. Coach approves.":"Not cleared yet — they'll come back with fresh numbers. Try again."}</div>
-    <div style="margin-top:16px"><button class="btn" id="exAgain">Back to practice</button></div></div>`;
+    <div class="card pop"><div class="scorebig tnum">${resolved}</div><div class="resline">${resolved} of ${ex.items.length} mistake${ex.items.length===1?"":"s"} reconquered · 2-of-3 right clears each</div>
+    <div style="margin-top:14px;color:var(--muted);font-size:14px">${resolved>0?"That's Comeback Index climbing. Coach approves.":"Not cleared — get 2 of 3 next time and they'll drop off your list."}</div>
+    <div style="margin-top:16px"><button class="btn" id="exAgain">Back to Reconquer</button></div></div>`;
   $("#exHome").onclick=openHub;$("#exAgain").onclick=openExtra;}
 /* ---------- PRACTICE TESTS ---------- */
 let doneMap={};
@@ -577,7 +602,11 @@ async function openBoard(type){show("board");[...$("#tabs").children].forEach(t=
   const subs={daily:"Same 10 for everyone — fair by design.",accuracy:"Ranked by % correct — climbers welcome.",streak:"Longest active streak wins.",batch:"Batch average — carry your squad."};$("#leagueSub").textContent=subs[type]||"";
   try{const r=await api("/leaderboard?type="+type+"&day="+today()+"&pin="+encodeURIComponent(ME.pin));
     if(!r.ok||!r.rows.length){box.innerHTML=`<div class="empty">No scores yet today.<br>Be the first — play the Daily Duel.</div>`;return;}
-    box.innerHTML="";r.rows.forEach((p,i)=>{const you=p.name===ME.name||(type==="batch"&&p.batch===ME.batch);
+    box.innerHTML="";
+    const youIdx=r.rows.findIndex(p=>p.name===ME.name||(type==="batch"&&p.batch===ME.batch));
+    if(type!=="batch"&&youIdx>0){const above=r.rows[youIdx-1],gap=above.score-r.rows[youIdx].score,unit=type==="accuracy"?"%":"";
+      box.appendChild(el("div","rival",`🎯 Next target: <b>${above.name}</b> at #${youIdx}<span class="gap">${gap>0?gap+unit+" ahead":"neck &amp; neck"}</span>`));}
+    r.rows.forEach((p,i)=>{const you=p.name===ME.name||(type==="batch"&&p.batch===ME.batch);
       const rw=el("div","row"+(you?" you":"")+(i<3?" top3":""));
       const av=you?`<span class="av">${AV_WARRIOR}</span>`:`<span class="av" style="background:${AVC[i%AVC.length]}">${(p.name||"?")[0]}</span>`;
       rw.innerHTML=`<span class="rk tnum">${i+1}</span>${av}<span class="who"><div class="n">${p.name}${i===0?" 👑":""}${you?" · you":""}</div><div class="bt">${p.batch||""}</div></span><span class="sc tnum">${type==="accuracy"?p.score+"%":p.score}</span>`;
