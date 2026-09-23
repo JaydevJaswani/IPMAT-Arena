@@ -112,6 +112,10 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .pmeter{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .pmeter .rg{flex:1;height:12px;border-radius:999px;background:var(--card2);border:1.5px solid var(--line);overflow:hidden}.pmeter .rg i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .4s}
 .pmeter .lbl{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--muted)}
+.nudge{display:flex;align-items:center;gap:8px;width:100%;text-align:left;margin-top:14px;padding:13px 15px;border-radius:14px;font-weight:700;font-size:13.5px;border:1.5px solid var(--amber);background:color-mix(in srgb,var(--amber) 14%,#fff);color:var(--ink);box-shadow:var(--shadow)}
+.nudge.hot{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,#fff)}
+.nudge b{font-weight:800}.nudge .pl{margin-left:auto;color:var(--primary);white-space:nowrap}
+.qtext,.opt,.answers,.fb .sol,.fb .ans{-webkit-user-select:none;user-select:none}
 .foot{color:var(--faint);font-size:12px;text-align:center;margin-top:26px;line-height:1.6}
 .pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:sp 1s linear infinite;margin:20px auto}@keyframes sp{to{transform:rotate(360deg)}}
@@ -260,6 +264,8 @@ function tabAutoSubmit(kind){
   document.body.appendChild(wrap);wrap.querySelector("#_tabOk").onclick=()=>wrap.remove();
   if(kind==="duel")finishDaily();else if(typeof tpSubmit==="function")tpSubmit();
 }
+/* integrity: block copy / cut / paste / right-click while inside a question */
+["copy","cut","paste","contextmenu"].forEach(ev=>document.addEventListener(ev,e=>{if(_activeKind())e.preventDefault();}));
 /* login */
 async function doLogin(){const pin=($("#pin").value||"").trim().toUpperCase(),out=$("#loginOut");
   if(!pin){out.innerHTML=`<div class="err">✗ Enter your PIN.</div>`;return;}
@@ -276,6 +282,7 @@ async function openHub(){
   show("hub");const h=$("#hub");
   h.innerHTML=`<div class="hero"><div class="eyebrow">Welcome back</div><h1>${ME.name.split(" ")[0]}.</h1><p class="sub">Batch ${ME.batch} · Gold League.</p>
     <div class="coachrow"><span class="av">${AV_GURU}</span><div class="msg"><b>Coach WarGuru:</b> ${pick(COACH)}</div></div></div>
+    <div id="streakNudge"></div>
     <div class="statrow"><div class="stat c1"><div class="n tnum" id="hRank">—</div><div class="l">Today's rank</div></div><div class="stat c2"><div class="n tnum" id="hSolved">—</div><div class="l">Solved</div></div><div class="stat c3"><div class="n tnum" id="hAcc">—</div><div class="l">Accuracy</div></div></div>
     <div class="score2"><div class="bigstat cp"><div class="h">⚔️ Conquest Points</div><div class="v tnum" id="hCP">—</div><div class="subv" id="hCPsub">solving score · harder = more</div></div>
       <div class="bigstat cb"><div class="h">↺ Comeback Index</div><div class="v tnum" id="hCB">—</div><div class="subv" id="hCBsub">mistakes reconquered</div></div></div>
@@ -297,6 +304,11 @@ async function openHub(){
     $("#hCBsub").innerHTML=cb.total?`${cb.redos} extra solves · batch avg ${cb.peerAvg}${cb.redos>cb.peerAvg?' · <b style="color:var(--good)">ahead</b>':''}`:"no misses yet — nice";
     $("#extraGo").outerHTML=cb.open>0?`<span class="pill warn">${cb.open} to fix</span>`:`<span class="go">→</span>`;
     if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="pill">✓ done</span>`;
+    const nz=$("#streakNudge");
+    if(m.dailyDone){nz.innerHTML="";}
+    else{const eve=new Date().getHours()>=17,st=m.streak||0;
+      nz.innerHTML=`<button class="nudge ${eve?'hot':''}" id="nudgeBtn">🔥 <b>${st>0?st+"-day streak on the line":"Start your streak"}</b> — ${eve?"finish today's Daily Duel before midnight":"today's Daily Duel isn't done yet"}<span class="pl">Play →</span></button>`;
+      $("#nudgeBtn").onclick=startDaily;}
     renderAreas(m.mastery);
   }}catch(e){}
   try{const lb=await api("/leaderboard?type=daily&day="+today());if(lb.ok){const i=lb.rows.findIndex(x=>x.name===ME.name);$("#hRank").textContent=i>=0?"#"+(i+1):"—";}}catch(e){}
