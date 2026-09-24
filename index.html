@@ -378,7 +378,7 @@ async function openPractice(topic,level){
     try{const r=await api("/practice?topic="+encodeURIComponent(topic)+"&level="+level);PS.queue=shuffle(r.questions||[]).slice(0,10).map(mkStatic);}catch(e){}
     if(!PS.queue.length){$("#practice").innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(topic)}</h2><span class="link" id="pBack">← Map</span></div><div class="card"><div class="empty">No questions here yet — coming soon.</div></div>`;$("#pBack").onclick=openHub;return;}
     PS.goal=PS.queue.length;
-  }else{for(let k=0;k<10;k++)PS.queue.push(mkGen(topic,level));}
+  }else{if(!genByTL(topic,level).length){$("#practice").innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(topic)}</h2><span class="link" id="pBack">← Map</span></div><div class="card"><div class="empty">No questions here yet — coming soon.</div></div>`;$("#pBack").onclick=openHub;return;}for(let k=0;k<10;k++)PS.queue.push(mkGen(topic,level));}
   pServe();
 }
 function mkStatic(s){return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};}
