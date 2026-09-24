@@ -371,29 +371,26 @@ let PS=null;
 async function openPractice(topic,level){
   if(CAMPAIGN.done.has(topic+"|"+level)){openLevelReview(topic,level);return;}
   const backing=CAMPAIGN.poolCov.has(topic+"|"+level)?"static":"gen";
-  PS={topic,level,tier:LVLTIER[level],backing,i:0,total:10,correct:0,detail:[],pool:[],cur:null,answered:false,sel:null};
+  PS={topic,level,tier:LVLTIER[level],backing,hasGen:genCov.has(topic+"|"+level),queue:[],i:0,goal:10,mastered:0,attempts:0,detail:[],cur:null,answered:false,sel:null};
   show("practice");
   if(backing==="static"){
     $("#practice").innerHTML=`<div class="spin"></div>`;
-    try{const r=await api("/practice?topic="+encodeURIComponent(topic)+"&level="+level);PS.pool=shuffle(r.questions||[]);}catch(e){}
-    if(!PS.pool.length){$("#practice").innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic}</h2><span class="link" id="pBack">← Map</span></div><div class="card"><div class="empty">No questions here yet — coming soon.</div></div>`;$("#pBack").onclick=openHub;return;}
-    PS.total=Math.min(10,PS.pool.length);
-  }
-  pNext();
+    try{const r=await api("/practice?topic="+encodeURIComponent(topic)+"&level="+level);PS.queue=shuffle(r.questions||[]).slice(0,10).map(mkStatic);}catch(e){}
+    if(!PS.queue.length){$("#practice").innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(topic)}</h2><span class="link" id="pBack">← Map</span></div><div class="card"><div class="empty">No questions here yet — coming soon.</div></div>`;$("#pBack").onclick=openHub;return;}
+    PS.goal=PS.queue.length;
+  }else{for(let k=0;k<10;k++)PS.queue.push(mkGen(topic,level));}
+  pServe();
 }
-function pBuildQ(){
-  if(PS.backing==="gen"){const g=pick(genByTL(PS.topic,PS.level));const q=g.make();q.topic=PS.topic;q.tier=PS.tier;q._gen=g.id;return q;}
-  const s=PS.pool[PS.i%PS.pool.length];
-  return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};
-}
-function pNext(){if(PS.i>=PS.total){pFinish();return;}PS.cur=pBuildQ();PS.answered=false;PS.sel=null;pRender();}
+function mkStatic(s){return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};}
+function mkGen(topic,level){const g=pick(genByTL(topic,level));const q=g.make();return {kind:q.kind,stem:q.q,options:q.options,answer:q.answer,sol:q.sol,trap:q.trap,_gen:g.id};}
+function pServe(){if(PS.mastered>=PS.goal){pFinish();return;}PS.cur=PS.queue[PS.i];PS.answered=false;PS.sel=null;pRender();}
 function pRender(){
-  const q=PS.cur,s=$("#practice"),stem=q.q||q.stem;
+  const q=PS.cur,s=$("#practice"),stem=q.stem;
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
-  const pct=Math.round(PS.i/PS.total*100);
+  const pct=Math.round(PS.mastered/PS.goal*100),retry=PS.i>=PS.goal;
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(PS.topic)}</h2><span class="link" id="pBack">← Map</span></div>
-    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Q ${PS.i+1}/${PS.total} · ${LVLNAME[PS.level]} · pass ${Math.ceil(0.7*PS.total)}/${PS.total}</div></div>
-    <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span></div>
+    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Mastered ${PS.mastered}/${PS.goal} · ${LVLNAME[PS.level]}</div></div>
+    <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span>${retry?`<span class="chip heavy">↺ retry · fresh values</span>`:""}</div>
     <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
   $("#pBack").onclick=openHub;const A=$("#pA");
   if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
@@ -404,7 +401,7 @@ function pRender(){
   if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
   const B=$("#pB");
   if(!PS.answered){const c=el("button","btn","Check");c.onclick=pCheck;B.appendChild(c);}
-  else{const last=PS.i>=PS.total-1,n=el("button","btn",last?"Finish level →":"Next question →");n.onclick=()=>{PS.i++;pNext();};B.appendChild(n);}
+  else{const done=PS.mastered>=PS.goal,n=el("button","btn",done?"Finish — cleared →":(PS.lastCorrect?"Next →":"Retry this one →"));n.onclick=()=>{PS.i++;pServe();};B.appendChild(n);}
 }
 async function pCheck(){
   const q=PS.cur;let given;
@@ -414,30 +411,22 @@ async function pCheck(){
   if(PS.backing==="gen"){correct=(q.kind==="mcq"?given===q.answer:Number(given)===Number(q.answer));correctAns=q.answer;sol=q.sol;
     api("/plog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:[{genId:q._gen,topic:PS.topic,tier:PS.tier,correct}]})}).catch(()=>{});}
   else{try{const r=await api("/pgrade",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,items:[{id:q._static,given}]})});const d=(r.detail&&r.detail[0])||{};correct=!!d.correct;correctAns=d.answer;sol=d.solution;}catch(e){}}
-  PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;if(correct)PS.correct++;
-  PS.detail.push({stem:q.q||q.stem,options:q.kind==="mcq"?q.options:null,given,correct,answer:correctAns,solution:sol});
+  PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;PS.attempts++;
+  if(correct){PS.mastered++;PS.detail.push({stem:q.stem,options:q.kind==="mcq"?q.options:null,given,correct:true,answer:correctAns,solution:sol});}
+  else{PS.queue.push(PS.hasGen?mkGen(PS.topic,PS.level):q);}   // miss returns (fresh values if a generator exists)
   pRender();
 }
-const PASS_PCT=0.7;
 async function pFinish(){
-  const s=$("#practice"),need=Math.ceil(PASS_PCT*PS.total),passed=PS.correct>=need,acc=Math.round(PS.correct/PS.total*100);
-  if(passed){
-    try{await api("/level-save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,correct:PS.correct,total:PS.total,detail:PS.detail})});}catch(e){}
-    CAMPAIGN.done.add(PS.topic+"|"+PS.level);
-    const nextL={L1:"L2",L2:"L3",L3:null}[PS.level],nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL));
-    s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level cleared</h2><span class="link" id="pHome">← Map</span></div>
-      <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${dName(PS.topic)} · ${LVLNAME[PS.level]} cleared</div>
-      <div class="resline">${PS.correct}/${PS.total} correct · ${acc}% · passed (needed ${need})</div>
-      <div style="color:var(--muted);margin-top:8px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"That's the top tier here — legend."} These 10 are now locked — review them anytime.</div>
-      <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextHas?`<button class="btn sm" id="pNextL">Take ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pReview">Review</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
-    $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);$("#pReview").onclick=()=>openLevelReview(PS.topic,PS.level);
-  }else{
-    s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Not cleared yet</h2><span class="link" id="pHome">← Map</span></div>
-      <div class="card pop" style="text-align:center"><div style="font-size:52px">💪</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${PS.correct}/${PS.total} — need ${need} to unlock ${LVLNAME[{L1:"L2",L2:"L3",L3:"L3"}[PS.level]]}</div>
-      <div style="color:var(--muted);margin-top:8px">So close. This level isn't locked — read the solutions, then take a fresh set and clear ${need}/10 to move up.</div>
-      <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn sm" id="pRetry">Try again →</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
-    $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;$("#pRetry").onclick=()=>openPractice(PS.topic,PS.level);
-  }
+  const s=$("#practice");
+  try{await api("/level-save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,correct:PS.goal,total:PS.goal,detail:PS.detail})});}catch(e){}
+  CAMPAIGN.done.add(PS.topic+"|"+PS.level);
+  const nextL={L1:"L2",L2:"L3",L3:null}[PS.level],nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL)),tries=PS.attempts;
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level cleared</h2><span class="link" id="pHome">← Map</span></div>
+    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${dName(PS.topic)} · ${LVLNAME[PS.level]} cleared</div>
+    <div class="resline">All ${PS.goal} mastered${tries>PS.goal?` in ${tries} attempts`:" — flawless!"}</div>
+    <div style="color:var(--muted);margin-top:8px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"That's the top tier here — legend."} Locked now — review anytime.</div>
+    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextHas?`<button class="btn sm" id="pNextL">Take ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pReview">Review</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
+  $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);$("#pReview").onclick=()=>openLevelReview(PS.topic,PS.level);
 }
 async function openLevelReview(topic,level){
   show("practice");const s=$("#practice");s.innerHTML=`<div class="spin"></div>`;
