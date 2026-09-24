@@ -392,7 +392,7 @@ function pRender(){
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
   const pct=Math.round(PS.i/PS.total*100);
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(PS.topic)}</h2><span class="link" id="pBack">← Map</span></div>
-    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Q ${PS.i+1}/${PS.total} · ${LVLNAME[PS.level]}</div></div>
+    <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Q ${PS.i+1}/${PS.total} · ${LVLNAME[PS.level]} · pass ${Math.ceil(0.7*PS.total)}/${PS.total}</div></div>
     <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span></div>
     <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
   $("#pBack").onclick=openHub;const A=$("#pA");
@@ -418,17 +418,26 @@ async function pCheck(){
   PS.detail.push({stem:q.q||q.stem,options:q.kind==="mcq"?q.options:null,given,correct,answer:correctAns,solution:sol});
   pRender();
 }
+const PASS_PCT=0.7;
 async function pFinish(){
-  const s=$("#practice");
-  try{await api("/level-save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,correct:PS.correct,total:PS.total,detail:PS.detail})});}catch(e){}
-  CAMPAIGN.done.add(PS.topic+"|"+PS.level);
-  const nextL={L1:"L2",L2:"L3",L3:null}[PS.level],nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL)),acc=Math.round(PS.correct/PS.total*100);
-  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level done</h2><span class="link" id="pHome">← Map</span></div>
-    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${dName(PS.topic)} · ${LVLNAME[PS.level]} cleared</div>
-    <div class="resline">${PS.correct}/${PS.total} correct · ${acc}%</div>
-    <div style="color:var(--muted);margin-top:8px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"That's the top tier here — legend."} These 10 are now locked — review them anytime.</div>
-    <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextHas?`<button class="btn sm" id="pNextL">Take ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pReview">Review</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
-  $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);$("#pReview").onclick=()=>openLevelReview(PS.topic,PS.level);
+  const s=$("#practice"),need=Math.ceil(PASS_PCT*PS.total),passed=PS.correct>=need,acc=Math.round(PS.correct/PS.total*100);
+  if(passed){
+    try{await api("/level-save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,correct:PS.correct,total:PS.total,detail:PS.detail})});}catch(e){}
+    CAMPAIGN.done.add(PS.topic+"|"+PS.level);
+    const nextL={L1:"L2",L2:"L3",L3:null}[PS.level],nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL));
+    s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level cleared</h2><span class="link" id="pHome">← Map</span></div>
+      <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${dName(PS.topic)} · ${LVLNAME[PS.level]} cleared</div>
+      <div class="resline">${PS.correct}/${PS.total} correct · ${acc}% · passed (needed ${need})</div>
+      <div style="color:var(--muted);margin-top:8px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"That's the top tier here — legend."} These 10 are now locked — review them anytime.</div>
+      <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextHas?`<button class="btn sm" id="pNextL">Take ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pReview">Review</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
+    $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;if(nextHas)$("#pNextL").onclick=()=>openPractice(PS.topic,nextL);$("#pReview").onclick=()=>openLevelReview(PS.topic,PS.level);
+  }else{
+    s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Not cleared yet</h2><span class="link" id="pHome">← Map</span></div>
+      <div class="card pop" style="text-align:center"><div style="font-size:52px">💪</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${PS.correct}/${PS.total} — need ${need} to unlock ${LVLNAME[{L1:"L2",L2:"L3",L3:"L3"}[PS.level]]}</div>
+      <div style="color:var(--muted);margin-top:8px">So close. This level isn't locked — read the solutions, then take a fresh set and clear ${need}/10 to move up.</div>
+      <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn sm" id="pRetry">Try again →</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
+    $("#pHome").onclick=openHub;$("#pHome2").onclick=openHub;$("#pRetry").onclick=()=>openPractice(PS.topic,PS.level);
+  }
 }
 async function openLevelReview(topic,level){
   show("practice");const s=$("#practice");s.innerHTML=`<div class="spin"></div>`;

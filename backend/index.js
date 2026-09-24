@@ -327,10 +327,13 @@ async function campaign(url, env) {
 }
 async function levelSave(req, env) {
   const b = await req.json();
+  const total = b.total | 0, correct = b.correct | 0, need = Math.ceil(0.7 * total);
+  // a level is only "cleared" (locked + unlocks next) when the student passes (>=70%)
+  if (total <= 0 || correct < need) return json({ ok: true, passed: false, need });
   await env.DB.prepare(
     "INSERT OR IGNORE INTO lattempts (pin,topic,level,correct,total,detail) VALUES (?,?,?,?,?,?)")
-    .bind(cleanPin(b.pin), b.topic, b.level, b.correct | 0, b.total | 0, JSON.stringify(b.detail || [])).run();
-  return json({ ok: true });
+    .bind(cleanPin(b.pin), b.topic, b.level, correct, total, JSON.stringify(b.detail || [])).run();
+  return json({ ok: true, passed: true });
 }
 async function levelReview(url, env) {
   const pin = cleanPin(url.searchParams.get("pin")), t = url.searchParams.get("topic"), l = url.searchParams.get("level");
