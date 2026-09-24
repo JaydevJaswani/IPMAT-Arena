@@ -149,8 +149,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   </section>
   <section id="results" hidden></section>
   <section id="tests" hidden>
-    <div class="section-h" style="margin-top:8px"><h2>Drills</h2></div><div id="testList"></div>
-    <p class="hint">Each test can be taken once, then it's review-only.</p>
+    <div class="section-h" style="margin-top:8px"><h2>Drills</h2><span class="link" id="drBack">← Home</span></div><div id="testList"></div>
   </section>
   <section id="testplay" hidden>
     <div class="qtop"><div class="dots" id="tpDots"></div><button class="btn ghost sm" id="tpPause">⏸ Pause</button></div>
@@ -214,19 +213,21 @@ const GBYID={};G.forEach(g=>GBYID[g.id]=g);
 const genForTopic=t=>{const m=G.filter(g=>g.topic===t);return m.length?pick(m):pick(G);};
 const tierClass=t=>t&&t.startsWith("Warm")?"warm":t&&t.startsWith("Exam")?"exam":"heavy";
 /* canonical topics + campaign coverage */
-const TCANON={"Linear Equations":"Linear & Quadratic Equations","Number Theory":"Remainders & Number Theory","Averages & Ratio":"Averages & Mixtures"};
-G.forEach(g=>{g.topic=TCANON[g.topic]||g.topic;});
-const TIERLVL={"Warm-Up":"L1","Exam-Relevant":"L2","Heavy & Tricky":"L3","Killer":"L4"};
-const LVLTIER={L1:"Warm-Up",L2:"Exam-Relevant",L3:"Heavy & Tricky",L4:"Killer"};
+const GMAP={g1:"Linear Equations",g2:"Linear Equations",g3:"Indices & Surds",g4:"Indices & Surds",g5:"Factors, Divisibility & HCF-LCM",g6:"Factors, Divisibility & HCF-LCM",g7:"Remainders & Modular Arithmetic",g8:"Indices & Surds",g9:"Indices & Surds",g10:"Factors, Divisibility & HCF-LCM",g11:"Digits, Base Systems & Integer Equations",g12:"Percentages",g13:"Averages",g14:"Time, Speed & Distance (trains, boats, races)"};
+G.forEach(g=>{g.topic=GMAP[g.id]||g.topic;});
+const TIERLVL={"Warm-Up":"L1","Exam-Relevant":"L2","Heavy & Tricky":"L3"};
+const LVLTIER={L1:"Warm-Up",L2:"Exam-Relevant",L3:"Heavy & Tricky"};
 const LVLNAME={L1:"Easy",L2:"Med",L3:"Hard"};
 const genCov=new Set();G.forEach(g=>genCov.add(g.topic+"|"+TIERLVL[g.tier]));
 const genByTL=(t,l)=>G.filter(g=>g.topic===t&&TIERLVL[g.tier]===l);
 const SYLLABUS=[
- ["Arithmetic",["Number System","Remainders & Number Theory","Percentages","Profit, Loss & Discount","SI & CI","Ratio & Proportion","Averages & Mixtures","Time, Speed & Distance","Time & Work"]],
- ["Algebra",["Linear & Quadratic Equations","Inequalities & Modulus","Surds & Indices","Logarithms","Sequences & Series","Functions & Graphs"]],
- ["Geometry & Mensuration",["Triangles & Polygons","Circles","Coordinate Geometry","Mensuration","Trigonometry"]],
- ["Modern Math",["Permutations & Combinations","Probability","Set Theory & Venn","Matrices & Determinants"]],
- ["Data Interpretation",["Data Interpretation"]]];
+ ["Number System",["Factors, Divisibility & HCF-LCM","Remainders & Modular Arithmetic","Unit Digits & Cyclicity","Factorials & Highest Power","Digits, Base Systems & Integer Equations"]],
+ ["Arithmetic",["Percentages","Profit, Loss & Discount","Ratio, Proportion & Variation (incl. ages, partnership)","Averages","Mixtures & Alligation","Simple & Compound Interest","Time, Speed & Distance (trains, boats, races)","Time & Work (incl. pipes)"]],
+ ["Algebra",["Linear Equations","Quadratics & Polynomials","Indices & Surds","Logarithms","Inequalities & Modulus","Functions (floor, modulus, general)","Progressions & Series","Matrices & Determinants"]],
+ ["Geometry & Mensuration",["Triangles","Circles","Polygons & Quadrilaterals","Coordinate Geometry","Mensuration 2D","Mensuration 3D","Trigonometry (incl. heights & distances)"]],
+ ["Modern Math",["Permutations & Combinations","Probability","Sets & Venn Diagrams","Binomial Theorem","Statistics (mean, median, mode, SD)"]]];
+const DNAME={"Ratio, Proportion & Variation (incl. ages, partnership)":"Ratio & Proportion","Time, Speed & Distance (trains, boats, races)":"Time, Speed & Distance","Time & Work (incl. pipes)":"Time & Work","Functions (floor, modulus, general)":"Functions","Trigonometry (incl. heights & distances)":"Trigonometry","Factors, Divisibility & HCF-LCM":"Factors, HCF & LCM","Remainders & Modular Arithmetic":"Remainders & Mod","Digits, Base Systems & Integer Equations":"Digits & Base Systems","Statistics (mean, median, mode, SD)":"Statistics","Permutations & Combinations":"Permutations & Combos"};
+const dName=t=>DNAME[t]||t;
 let CAMPAIGN={done:new Set(),poolCov:new Set()};
 /* report issue */
 let currentQ=null;
@@ -295,7 +296,7 @@ async function openHub(){
       <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily Duel</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
       <button class="tile map" id="tConquest"><span class="ic">🗺️</span><span><span class="tt">Conquest</span><span class="ts">Warm up &amp; grind · unlimited practice, level by level</span></span><span class="go">→</span></button>
       <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Reconquer</span><span class="ts">Only the questions you got wrong</span></span><span class="go" id="extraGo">→</span></button>
-      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Curated topic tests · take once</span></span><span class="go">→</span></button>
+      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Timed topic tests · unlock by conquering a topic</span></span><span class="go">🔒</span></button>
       <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
     </div>
     <div class="section-h"><h2>Conquest by area</h2><span class="mono" style="font-size:12px;color:var(--faint)">points</span></div>
@@ -354,7 +355,7 @@ async function loadCampaign(){
         else{state=isDone?"cleared":(chainOK?"open":"locked");chainOK=chainOK&&isDone;}
         return {L,state};
       });
-      html+=`<div class="trow"><div class="tn">${tp}</div><div class="nodes">`+cells.map(c=>{
+      html+=`<div class="trow"><div class="tn">${dName(tp)}</div><div class="nodes">`+cells.map(c=>{
         if(c.state==="soon")return `<div class="node soon">${LVLNAME[c.L]}<small>soon</small></div>`;
         if(c.state==="locked")return `<div class="node">🔒<small>${LVLNAME[c.L]}</small></div>`;
         if(c.state==="cleared")return `<button class="node cleared" data-t="${tp}" data-l="${c.L}">⭐<small>${LVLNAME[c.L]}</small></button>`;
@@ -369,7 +370,7 @@ async function loadCampaign(){
 let PS=null;
 async function openPractice(topic,level){
   if(CAMPAIGN.done.has(topic+"|"+level)){openLevelReview(topic,level);return;}
-  const backing=genCov.has(topic+"|"+level)?"gen":"static";
+  const backing=CAMPAIGN.poolCov.has(topic+"|"+level)?"static":"gen";
   PS={topic,level,tier:LVLTIER[level],backing,i:0,total:10,correct:0,detail:[],pool:[],cur:null,answered:false,sel:null};
   show("practice");
   if(backing==="static"){
@@ -390,9 +391,9 @@ function pRender(){
   const q=PS.cur,s=$("#practice"),stem=q.q||q.stem;
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
   const pct=Math.round(PS.i/PS.total*100);
-  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${PS.topic}</h2><span class="link" id="pBack">← Map</span></div>
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(PS.topic)}</h2><span class="link" id="pBack">← Map</span></div>
     <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Q ${PS.i+1}/${PS.total} · ${LVLNAME[PS.level]}</div></div>
-    <div class="card"><div class="qmeta"><span class="chip t">${PS.topic}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span></div>
+    <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span></div>
     <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
   $("#pBack").onclick=openHub;const A=$("#pA");
   if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
@@ -423,7 +424,7 @@ async function pFinish(){
   CAMPAIGN.done.add(PS.topic+"|"+PS.level);
   const nextL={L1:"L2",L2:"L3",L3:null}[PS.level],nextHas=nextL&&(genCov.has(PS.topic+"|"+nextL)||CAMPAIGN.poolCov.has(PS.topic+"|"+nextL)),acc=Math.round(PS.correct/PS.total*100);
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Level done</h2><span class="link" id="pHome">← Map</span></div>
-    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${PS.topic} · ${LVLNAME[PS.level]} cleared</div>
+    <div class="card pop" style="text-align:center"><div style="font-size:52px">⭐</div><div style="font-family:var(--disp);font-weight:800;font-size:21px">${dName(PS.topic)} · ${LVLNAME[PS.level]} cleared</div>
     <div class="resline">${PS.correct}/${PS.total} correct · ${acc}%</div>
     <div style="color:var(--muted);margin-top:8px">${nextHas?LVLNAME[nextL]+" level is now unlocked.":"That's the top tier here — legend."} These 10 are now locked — review them anytime.</div>
     <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">${nextHas?`<button class="btn sm" id="pNextL">Take ${LVLNAME[nextL]} →</button>`:""}<button class="btn ghost sm" id="pReview">Review</button><button class="btn ghost sm" id="pHome2">Map</button></div></div>`;
@@ -434,7 +435,7 @@ async function openLevelReview(topic,level){
   let r;try{r=await api("/level-review?pin="+encodeURIComponent(ME.pin)+"&topic="+encodeURIComponent(topic)+"&level="+level);}catch(e){}
   if(!r||!r.ok){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic}</h2><span class="link" id="pB2">← Map</span></div><div class="card"><div class="empty">Couldn't load review.</div></div>`;$("#pB2").onclick=openHub;return;}
   const acc=r.total?Math.round(r.correct/r.total*100):0;
-  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${topic} · ${LVLNAME[level]}</h2><span class="link" id="pHome">← Map</span></div>
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(topic)} · ${LVLNAME[level]}</h2><span class="link" id="pHome">← Map</span></div>
     <div class="card"><div style="font-weight:800">✓ Level complete — review only</div><div class="resline">${r.correct}/${r.total} correct · ${acc}%. These questions are locked; you can't re-answer them.</div></div>`;
   r.detail.forEach((d,i)=>{const card=el("div","card");card.style.marginTop="10px";
     card.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><b class="mono" style="color:var(--faint)">Q${i+1}</b>${d.correct?`<span class="chip warm">✓ you: ${d.given}</span>`:`<span class="chip heavy">✗ you: ${d.given||"—"}</span>`}</div>
@@ -544,13 +545,13 @@ async function exNext(){
   $("#exHome").onclick=openHub;$("#exAgain").onclick=openExtra;}
 /* ---------- PRACTICE TESTS ---------- */
 let doneMap={};
-async function openTests(){show("tests");const box=$("#testList");box.innerHTML=`<div class="spin"></div>`;
-  try{const [r,st]=await Promise.all([api("/tests"),api("/test-status?pin="+encodeURIComponent(ME.pin))]);
-    doneMap={};if(st.ok)st.done.forEach(d=>doneMap[d.test_id]=d);
-    if(!r.ok||!r.tests.length){box.innerHTML=`<div class="empty">No tests yet.</div>`;return;}
-    box.innerHTML="";r.tests.forEach(t=>{const done=doneMap[t.id];const b=el("button","tcard","<span class='ic'>📄</span><span><div class='tt'>"+t.name+"</div><div class='ts'>"+(t.topic||"Mixed")+" · "+t.q_count+" questions</div></span>"+(done?`<span class='cpill'>✓ ${done.score} · review</span>`:"<span class='go'>→</span>"));
-      b.onclick=()=>done?openReview(t.id):openTest(t.id);box.appendChild(b);});
-  }catch(e){box.innerHTML=`<div class="empty">Couldn't load tests.</div>`;}}
+async function openTests(){show("tests");$("#drBack").onclick=openHub;const box=$("#testList");
+  box.innerHTML=`<div class="card" style="text-align:center;grid-column:1/-1">
+    <div style="font-size:46px">🔒</div>
+    <div style="font-family:var(--disp);font-weight:800;font-size:20px;margin-top:6px">Drills are locked</div>
+    <div style="color:var(--muted);font-size:14px;margin-top:8px;max-width:36ch;margin-left:auto;margin-right:auto">Each topic's <b>Drill</b> — a timed 30-question test — unlocks once you've <b>conquered all three levels</b> of that topic in Conquest. Drills arrive right after the first rollout.</div>
+    <div style="margin-top:16px"><button class="btn sm" id="toConquest2">Go to Conquest →</button></div></div>`;
+  const b=$("#toConquest2");if(b)b.onclick=openConquest;}
 let tp={id:null,name:"",qs:[],i:0,ans:{}};
 async function openTest(id){_sw=0;show("testplay");$("#tpText").innerHTML="";$("#tpAnswers").innerHTML=`<div class="spin"></div>`;$("#tpMeta").innerHTML="";$("#tpBtns").innerHTML="";
   try{const r=await api("/test?id="+encodeURIComponent(id));if(!r.ok){$("#tpAnswers").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
