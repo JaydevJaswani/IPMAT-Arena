@@ -71,6 +71,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .chip{font-size:11.5px;font-weight:800;letter-spacing:.03em;padding:5px 11px;border-radius:999px}
 .chip.t{color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,#fff)}.chip.warm{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.exam{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,#fff)}.chip.heavy{color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,#fff)}.chip.n{color:var(--muted);background:var(--card2)}.chip.ok{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.no{color:var(--bad,#e5484d);background:color-mix(in srgb,var(--bad,#e5484d) 12%,#fff)}
 .revq{border-top:1px solid var(--line);padding:14px 0}.revq:first-of-type{border-top:none;padding-top:2px}.revh{display:flex;gap:6px;margin-bottom:8px}.revstem{font-size:14px;line-height:1.5;margin-bottom:8px}.revstem img{max-width:100%;border-radius:12px;margin-top:8px}.revans{font-size:13.5px;font-weight:700;margin-bottom:6px}.revans .ok{color:var(--green)}.revans .no{color:var(--bad,#e5484d)}.revq .sol{color:var(--ink);font-size:12.5px;white-space:pre-line;font-family:var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;line-height:1.6}
+.ddtoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;padding:11px 18px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.28);opacity:0;transition:opacity .3s,transform .3s;z-index:9999;pointer-events:none;max-width:90vw;text-align:center}.ddtoast.in{opacity:1;transform:translateX(-50%) translateY(0)}
 .qtext{font-size:20px;font-family:var(--disp);font-weight:600;line-height:1.32;letter-spacing:-.01em}.qtext sup{font-size:.68em}
 .answers{margin-top:18px;display:grid;gap:10px}
 .opt{display:flex;align-items:center;gap:12px;text-align:left;background:var(--card2);border:1.5px solid var(--line);border-radius:13px;padding:14px 15px;font-size:17px;transition:border-color .12s,background .12s;color:var(--ink)}.opt:hover{border-color:var(--faint)}.opt .k{font-family:var(--mono);font-weight:700;color:var(--faint);width:20px}
@@ -248,12 +249,14 @@ function show(id){["login","hub","quiz","results","tests","testplay","testresult
   window.scrollTo({top:0,behavior:"instant"});}
 $("#homeBtn").onclick=()=>openHub();
 /* tab-switch watch — notify on return; log + auto-submit for Daily Duel & Drills */
-let _leftAt=null,_leftKind=null,_sw=0;
+let _leftAt=null,_leftKind=null,_sw=0;const TAB_GRACE=6;
 function _activeKind(){if(!$("#quiz").hidden)return"duel";if(!$("#testplay").hidden)return"drill";if(!$("#practice").hidden||!$("#extra").hidden)return"soft";return null;}
 document.addEventListener("visibilitychange",()=>{
   if(document.hidden){_leftKind=_activeKind();if(_leftKind)_leftAt=Date.now();}
   else if(_leftAt!=null){const secs=Math.max(1,Math.round((Date.now()-_leftAt)/1000)),kind=_leftKind;_leftAt=null;_leftKind=null;
-    if(kind==="duel"||kind==="drill"){_sw++;
+    if(kind==="duel"||kind==="drill"){
+      if(secs<TAB_GRACE)return;   // brief blur (notification / accidental) — not a strike
+      _sw++;if(kind==="duel")ddSave();
       const ctx=kind==="drill"?("drill:"+((typeof tp!=="undefined"&&tp&&tp.id)||"")):"daily-duel";
       if(ME)api("/switch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,context:ctx,day:today()})}).catch(()=>{});
       if(_sw>=3)tabAutoSubmit(kind);
@@ -464,6 +467,12 @@ const WIN=["Clean. Next.","That's the one.","Locked in. 🔥","Textbook.","No wa
 const LOSE=["Nope — but now you'll remember it.","Ouch. Classic trap.","Off by a hair. Read the trap 👇","Not today. Its twin returns.","Method over the miss."];
 /* ---------- DAILY DUEL (static bank: /daily + /daily-submit) ---------- */
 let DD={qs:[],ans:{},cur:0,submitting:false},tLeft=720,timerId=null,timerRun=false;
+let _ddRetry=null,_ddSending=false;
+function ddKey(){return "dd:"+(ME?ME.pin:"?")+":"+today();}
+function ddSave(){if(!DD.qs.length||DD.submitting)return;try{localStorage.setItem(ddKey(),JSON.stringify({ans:DD.ans,tLeft,cur:DD.cur,sw:_sw,v:1}));}catch(e){}}
+function ddLoad(){try{const s=localStorage.getItem(ddKey());return s?JSON.parse(s):null;}catch(e){return null;}}
+function ddClear(){try{localStorage.removeItem(ddKey());}catch(e){}}
+function ddToast(msg){const t=el("div","ddtoast",msg);document.body.appendChild(t);setTimeout(()=>t.classList.add("in"),20);setTimeout(()=>{t.classList.remove("in");setTimeout(()=>t.remove(),300);},2600);}
 function ddDoneScreen(){show("results");const s=$("#results");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2><span class="link" id="ddHome">← Home</span></div><div class="card" style="text-align:center"><div style="font-size:46px">✅</div><div style="font-family:var(--disp);font-weight:800;font-size:20px;margin-top:6px">Already done today</div><div style="color:var(--muted);margin-top:8px">You've played today's Daily Duel — one shot per day. Fresh 10 tomorrow. Meanwhile, hit <b>Conquest</b>.</div><div style="margin-top:16px"><button class="btn sm" id="ddBoard">See the board →</button></div></div>`;$("#ddHome").onclick=openHub;$("#ddBoard").onclick=()=>openBoard("daily");}
 async function startDaily(){
   if(dailyDoneToday){ddDoneScreen();return;}
@@ -471,9 +480,13 @@ async function startDaily(){
   let r;try{r=await api("/daily?pin="+encodeURIComponent(ME.pin)+"&day="+today());}catch(e){$("#qtext").innerHTML=`<div class="empty">Couldn't load today's Daily Duel. Check your connection and try again.</div>`;return;}
   if(r&&r.done){dailyDoneToday=true;ddDoneScreen();return;}
   if(!r||!r.ok||!r.questions||!r.questions.length){$("#qtext").innerHTML=`<div class="empty">Today's Daily Duel isn't ready yet. Try again shortly.</div>`;return;}
-  DD={qs:r.questions,ans:{},cur:0,submitting:false};_sw=0;tLeft=720;renderDaily();
+  DD={qs:r.questions,ans:{},cur:0,submitting:false};
+  const saved=ddLoad();let resumed=false;
+  if(saved&&typeof saved.tLeft==="number"&&saved.tLeft>0){DD.ans=saved.ans||{};DD.cur=Math.min(Math.max(0,saved.cur||0),DD.qs.length-1);_sw=saved.sw||0;tLeft=saved.tLeft;resumed=Object.keys(DD.ans).length>0;}
+  else{_sw=0;tLeft=720;}
+  renderDaily();if(resumed)ddToast("↺ Resumed where you left off");
   if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);timerRun=true;}
-function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);if(tLeft<=0){timerRun=false;clearInterval(timerId);finishDaily();}tLeft--;}
+function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);if(tLeft<=0){timerRun=false;clearInterval(timerId);finishDaily();return;}tLeft--;if(tLeft%3===0)ddSave();}
 function ddots(){const box=$("#dots");box.innerHTML="";DD.qs.forEach((q,i)=>{const s=el("i");const a=DD.ans[q.id];if(a!=null&&a!=="")s.classList.add("done");if(i===DD.cur)s.classList.add("now");box.appendChild(s);});}
 function ddCount(){return DD.qs.filter(q=>{const a=DD.ans[q.id];return a!=null&&a!=="";}).length;}
 function renderDaily(){const q=DD.qs[DD.cur];ddots();
@@ -482,10 +495,10 @@ function renderDaily(){const q=DD.qs[DD.cur];ddots();
   const cur=DD.ans[q.id];
   if(q.type==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
     if(o===cur)b.classList.add("sel");
-    b.onclick=()=>{DD.ans[q.id]=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");ddots();};A.appendChild(b);});}
+    b.onclick=()=>{DD.ans[q.id]=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");ddots();ddSave();};A.appendChild(b);});}
   else{const w=el("div","numin"),inp=el("input");inp.type="text";inp.inputMode="none";inp.readOnly=true;inp.placeholder="tap the keypad";inp.autocomplete="off";
-    inp.value=cur||"";inp.id="dNum";inp.addEventListener("input",()=>{DD.ans[q.id]=inp.value.trim();ddots();});
-    w.appendChild(inp);A.appendChild(w);A.appendChild(numKeypad(inp,()=>{DD.ans[q.id]=inp.value.trim();ddots();}));}
+    inp.value=cur||"";inp.id="dNum";inp.addEventListener("input",()=>{DD.ans[q.id]=inp.value.trim();ddots();ddSave();});
+    w.appendChild(inp);A.appendChild(w);A.appendChild(numKeypad(inp,()=>{DD.ans[q.id]=inp.value.trim();ddots();ddSave();}));}
   const btns=$("#qbtns");btns.innerHTML="";const row=el("div","navrow");
   if(DD.cur>0){const p=el("button","btn ghost sm","← Prev");p.onclick=()=>{DD.cur--;renderDaily();};row.appendChild(p);}
   if(DD.cur<DD.qs.length-1){const n=el("button","btn","Next →");n.onclick=()=>{DD.cur++;renderDaily();};row.appendChild(n);}
@@ -496,11 +509,22 @@ function confirmFinishDaily(){const left=DD.qs.length-ddCount();
     wrap.innerHTML=`<div class="box"><h3>Submit now?</h3><p>You've left <b>${left}</b> question${left>1?"s":""} blank. Blank answers score 0 — one shot per day, no re-runs.</p><div class="mbtns"><button class="btn ghost sm" id="_ddCancel" style="flex:1">Keep solving</button><button class="btn sm" id="_ddGo" style="flex:1">Submit anyway</button></div></div>`;
     document.body.appendChild(wrap);wrap.querySelector("#_ddCancel").onclick=()=>wrap.remove();wrap.querySelector("#_ddGo").onclick=()=>{wrap.remove();finishDaily();};return;}
   finishDaily();}
-async function finishDaily(){if(DD.submitting)return;DD.submitting=true;timerRun=false;clearInterval(timerId);
+function finishDaily(){if(DD.submitting)return;DD.submitting=true;timerRun=false;clearInterval(timerId);
+  try{localStorage.setItem(ddKey(),JSON.stringify({ans:DD.ans,tLeft,cur:DD.cur,sw:_sw,v:1}));}catch(e){}
+  submitDaily();}
+function showDailyRetry(){const s=$("#results");show("results");
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2></div><div class="card ddoffline" style="text-align:center"><div style="font-size:40px">📡</div><div style="font-family:var(--disp);font-weight:800;font-size:19px;margin-top:6px">Saved on your device</div><div style="color:var(--muted);margin-top:8px">You're offline right now. Your answers are safe — we'll submit automatically the moment you're back online. <b>Keep this screen open.</b></div><div style="margin-top:16px"><button class="btn sm" id="ddRetry">Try now</button></div><div style="margin-top:10px;font-size:12px;color:var(--faint)" id="ddRetryNote">Waiting for connection…</div></div>`;
+  $("#ddRetry").onclick=()=>{$("#ddRetryNote").textContent="Submitting…";submitDaily();};
+  if(!_ddRetry)_ddRetry=setInterval(submitDaily,12000);
+  window.removeEventListener("online",submitDaily);window.addEventListener("online",submitDaily);}
+async function submitDaily(){if(_ddSending)return;_ddSending=true;
   const timeSec=720-Math.max(0,tLeft);
-  const s=$("#results");show("results");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2></div><div class="card" style="text-align:center"><div class="spin"></div><div style="color:var(--muted);margin-top:10px">Scoring your run…</div></div>`;
+  const s=$("#results");if($("#results").hidden)show("results");
+  if(!document.querySelector(".ddretrying")&&!document.querySelector(".ddoffline"))s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2></div><div class="card ddretrying" style="text-align:center"><div class="spin"></div><div style="color:var(--muted);margin-top:10px">Scoring your run…</div></div>`;
   let r;try{r=await api("/daily-submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,day:today(),answers:DD.ans,timeSec})});}catch(e){r=null;}
-  if(!r||!r.ok){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2><span class="link" id="ddHome">← Home</span></div><div class="card"><div class="empty">Your answers didn't reach the server (connection dropped). Your Daily Duel wasn't recorded — reopen it to try again.</div></div>`;$("#ddHome").onclick=openHub;DD.submitting=false;return;}
+  _ddSending=false;
+  if(!r||!r.ok){showDailyRetry();return;}
+  if(_ddRetry){clearInterval(_ddRetry);_ddRetry=null;}window.removeEventListener("online",submitDaily);ddClear();
   dailyDoneToday=true;const dailyGo=$("#dailyGo");if(dailyGo)dailyGo.outerHTML=`<span class="pill">✓ done</span>`;
   const detail=r.detail||[],total=r.total||detail.length||10,right=r.correct||0,myScore=r.score||0,acc=total?Math.round(right/total*100):0;
   if(r.streak!=null)updateStreakPill(r.streak);
