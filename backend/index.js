@@ -32,6 +32,8 @@ export default {
       if (p === "/" )                    return json({ ok: true, service: "ipmat-arena" });
       if (p === "/login")                return login(req, env);
       if (p === "/me")                   return me(url, env);
+      if (p === "/daily")                return dailyGet(url, env);
+      if (p === "/daily-submit")         return dailySubmit(req, env);
       if (p === "/submit")               return submit(req, env);
       if (p === "/leaderboard")          return leaderboard(url, env);
       if (p === "/tests")                return listTests(env);
@@ -98,6 +100,56 @@ async function me(url, env) {
     conquest: cp.cp || 0, seen: cp.seen || 0, solved: cp.solved || 0, mastery,
     comeback: { resolved: w.resolved || 0, total: w.total || 0, open: (w.total || 0) - (w.resolved || 0),
       redos: myRedos, peerAvg: Math.round((peer || 0) * 10) / 10 } });
+}
+
+// ---- Daily Duel (curated static bank, same 10 for everyone that day) ----
+function fnv(s){let h=2166136261;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+async function dailyIds(env, day){
+  const ids=(await env.DB.prepare("SELECT id FROM questions WHERE test_id='daily-bank'").all()).results.map(r=>r.id);
+  return ids.map(id=>[fnv(day+"|"+id), id]).sort((a,b)=>a[0]-b[0]).slice(0,10).map(x=>x[1]);
+}
+async function dailyGet(url, env){
+  const pin=cleanPin(url.searchParams.get("pin")), day=url.searchParams.get("day");
+  const done=await env.DB.prepare("SELECT 1 FROM attempts WHERE pin=? AND set_id=?").bind(pin,"daily-"+day).first();
+  if(done) return json({ok:true,done:true});
+  const ids=await dailyIds(env,day); if(!ids.length) return json({ok:true,done:false,questions:[]});
+  const ph=ids.map(()=>"?").join(",");
+  const rows=(await env.DB.prepare(`SELECT id,topic,type,stem,options FROM questions WHERE id IN (${ph})`).bind(...ids).all()).results;
+  const byId={}; rows.forEach(r=>byId[r.id]=r);
+  const qs=ids.map(id=>byId[id]).filter(Boolean).map(q=>({...q,options:q.options?JSON.parse(q.options):null}));
+  return json({ok:true,done:false,questions:qs});
+}
+async function dailySubmit(req, env){
+  const b=await req.json(), pin=cleanPin(b.pin), day=b.day, setId="daily-"+day;
+  const stu=await env.DB.prepare("SELECT batch FROM students WHERE pin=?").bind(pin).first();
+  if(!stu) return json({ok:false,error:"unknown pin"},403);
+  const prior=await env.DB.prepare("SELECT score,correct,total FROM attempts WHERE pin=? AND set_id=?").bind(pin,setId).first();
+  const ids=await dailyIds(env,day), ph=ids.map(()=>"?").join(",");
+  const qs=(await env.DB.prepare(`SELECT id,topic,tier,type,answer,answer_display,solution,stem,options FROM questions WHERE id IN (${ph})`).bind(...ids).all()).results;
+  const byId={}; qs.forEach(q=>byId[q.id]=q);
+  const ans=b.answers||{}; let score=0,correct=0;
+  const detail=ids.map(id=>{const q=byId[id];if(!q)return null;const given=ans[id];
+    let ok=false;
+    if(given!=null&&given!==""){ ok = q.type==="int" ? Number(given)===Number(q.answer) : normAns(given)===normAns(q.answer); }
+    if(ok){correct++;score+=4;} else if(given!=null&&given!==""){ if(q.type!=="int")score-=1; }
+    return {id,stem:q.stem,options:q.options?JSON.parse(q.options):null,given:given||"",correct:ok,answer:q.answer_display||q.answer,solution:q.solution,topic:q.topic,tier:q.tier};
+  }).filter(Boolean);
+  const total=detail.length, timeSec=b.timeSec|0;
+  if(!prior){
+    await env.DB.prepare("INSERT INTO attempts (pin,set_id,day,score,correct,total,time_sec) VALUES (?,?,?,?,?,?,?) ON CONFLICT(pin,set_id) DO NOTHING")
+      .bind(pin,setId,day,score,correct,total,timeSec).run();
+    const logs=detail.map(d=>qlogStmt(env).bind(pin,d.topic||"",d.tier||"Exam-Relevant",d.id,"daily",d.correct?1:0,0));
+    if(logs.length) await env.DB.batch(logs);
+    for(const d of detail){ if(!d.correct&&d.given) await env.DB.prepare("INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,NULL,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1,resolved=0").bind(pin,d.id,d.topic||"",d.tier||"Exam-Relevant").run(); }
+    const prog=await env.DB.prepare("SELECT * FROM progress WHERE pin=?").bind(pin).first();
+    const xpGain=correct*20+(correct>=8?60:0); let streak=1,best=1,xp=xpGain;
+    if(prog){const cont=isYesterday(prog.last_day,day);streak=prog.last_day===day?prog.current_streak:(cont?prog.current_streak+1:1);best=Math.max(prog.best_streak,streak);xp=prog.xp+(prog.last_day===day?0:xpGain);}
+    await env.DB.prepare("INSERT INTO progress (pin,xp,current_streak,best_streak,last_day) VALUES (?,?,?,?,?) ON CONFLICT(pin) DO UPDATE SET xp=?,current_streak=?,best_streak=?,last_day=?").bind(pin,xp,streak,best,day,xp,streak,best,day).run();
+    var outStreak=streak, outXp=xp;
+  } else { score=prior.score; correct=prior.correct; }
+  const better=await env.DB.prepare("SELECT COUNT(*) n FROM attempts WHERE set_id=? AND (score>? OR (score=? AND time_sec<?))").bind(setId,score,score,timeSec).first();
+  const of=await env.DB.prepare("SELECT COUNT(*) n FROM attempts WHERE set_id=?").bind(setId).first();
+  return json({ok:true,already:!!prior,score,correct,total,rank:(better.n||0)+1,of:of.n,streak:typeof outStreak!=="undefined"?outStreak:null,detail});
 }
 
 async function submit(req, env) {

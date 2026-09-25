@@ -69,7 +69,8 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .timer{font-family:var(--mono);font-weight:700;font-size:15px;background:#fff;border:1.5px solid var(--line);padding:6px 11px;border-radius:999px;box-shadow:var(--shadow)}.timer.low{color:var(--bad);border-color:var(--bad)}.timer.paused{color:var(--amber);border-color:var(--amber)}
 .qmeta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .chip{font-size:11.5px;font-weight:800;letter-spacing:.03em;padding:5px 11px;border-radius:999px}
-.chip.t{color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,#fff)}.chip.warm{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.exam{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,#fff)}.chip.heavy{color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,#fff)}.chip.n{color:var(--muted);background:var(--card2)}
+.chip.t{color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,#fff)}.chip.warm{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.exam{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,#fff)}.chip.heavy{color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,#fff)}.chip.n{color:var(--muted);background:var(--card2)}.chip.ok{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.no{color:var(--bad,#e5484d);background:color-mix(in srgb,var(--bad,#e5484d) 12%,#fff)}
+.revq{border-top:1px solid var(--line);padding:14px 0}.revq:first-of-type{border-top:none;padding-top:2px}.revh{display:flex;gap:6px;margin-bottom:8px}.revstem{font-size:14px;line-height:1.5;margin-bottom:8px}.revstem img{max-width:100%;border-radius:12px;margin-top:8px}.revans{font-size:13.5px;font-weight:700;margin-bottom:6px}.revans .ok{color:var(--green)}.revans .no{color:var(--bad,#e5484d)}.revq .sol{color:var(--ink);font-size:12.5px;white-space:pre-line;font-family:var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;line-height:1.6}
 .qtext{font-size:20px;font-family:var(--disp);font-weight:600;line-height:1.32;letter-spacing:-.01em}.qtext sup{font-size:.68em}
 .answers{margin-top:18px;display:grid;gap:10px}
 .opt{display:flex;align-items:center;gap:12px;text-align:left;background:var(--card2);border:1.5px solid var(--line);border-radius:13px;padding:14px 15px;font-size:17px;transition:border-color .12s,background .12s;color:var(--ink)}.opt:hover{border-color:var(--faint)}.opt .k{font-family:var(--mono);font-weight:700;color:var(--faint);width:20px}
@@ -387,7 +388,7 @@ async function openPractice(topic,level){
 function mkStatic(s){return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};}
 function mkGen(topic,level){const g=pick(genByTL(topic,level));const q=g.make();return {kind:q.kind,stem:q.q,options:q.options,answer:q.answer,sol:q.sol,trap:q.trap,_gen:g.id};}
 function pServe(){if(PS.mastered>=PS.goal){pFinish();return;}PS.cur=PS.queue[PS.i];PS.answered=false;PS.sel=null;pRender();}
-function numKeypad(inp){const k=el("div","kpad");["1","2","3","4","5","6","7","8","9","C","0","⌫"].forEach(d=>{const b=el("button",(d==="C"||d==="⌫")?"act":"",d);b.type="button";b.onclick=()=>{if(d==="C")inp.value="";else if(d==="⌫")inp.value=inp.value.slice(0,-1);else inp.value+=d;};k.appendChild(b);});return k;}
+function numKeypad(inp,onChange){const k=el("div","kpad");["1","2","3","4","5","6","7","8","9","C","0","⌫"].forEach(d=>{const b=el("button",(d==="C"||d==="⌫")?"act":"",d);b.type="button";b.onclick=()=>{if(d==="C")inp.value="";else if(d==="⌫")inp.value=inp.value.slice(0,-1);else inp.value+=d;if(onChange)onChange();};k.appendChild(b);});return k;}
 function pRender(){
   const q=PS.cur,s=$("#practice"),stem=q.stem;
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
@@ -461,60 +462,70 @@ function fbBlock(correct,marks,q){const fb=el("div","fb "+(correct?"ok":"no")+" 
   fb.append(el("div","trap","<span class='tag'>Concept / trap</span><br>"+q.trap));fb.append(el("div","sol",q.sol));return fb;}
 const WIN=["Clean. Next.","That's the one.","Locked in. 🔥","Textbook.","No wasted moves."];
 const LOSE=["Nope — but now you'll remember it.","Ouch. Classic trap.","Off by a hair. Read the trap 👇","Not today. Its twin returns.","Method over the miss."];
-/* ---------- DAILY 10 (nav + clock stop) ---------- */
-let deck=[],cur=0,frontier=0,dAns=[],dSel=null,tLeft=720,timerId=null,timerRun=false;
-function buildDaily(){RNG=mulberry32(seedFor("daily-"+today()));
-  const byTier=t=>G.filter(g=>g.tier===t),want=[["Warm-Up",4],["Exam-Relevant",3],["Heavy & Tricky",3]],chosen=[];
-  want.forEach(([t,c])=>{const pool=shuffle(byTier(t));for(let i=0;i<c;i++)chosen.push(pool[i%pool.length]);});
-  deck=chosen.map(g=>({...g.make(),topic:g.topic,tier:g.tier,genId:g.id}));RNG=Math.random;cur=0;frontier=0;dAns=[];}
-function startDaily(){
-  if(dailyDoneToday){show("results");const s=$("#results");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2><span class="link" id="ddHome">← Home</span></div><div class="card" style="text-align:center"><div style="font-size:46px">✅</div><div style="font-family:var(--disp);font-weight:800;font-size:20px;margin-top:6px">Already done today</div><div style="color:var(--muted);margin-top:8px">You've played today's Daily Duel — one shot per day. Fresh 10 tomorrow. Meanwhile, hit <b>Conquest</b>.</div><div style="margin-top:16px"><button class="btn sm" id="ddBoard">See the board →</button></div></div>`;$("#ddHome").onclick=openHub;$("#ddBoard").onclick=()=>openBoard("daily");return;}
-  _sw=0;buildDaily();show("quiz");tLeft=720;renderDaily();if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);}
-function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);t.classList.remove("paused");if(tLeft<=0){clearInterval(timerId);finishDaily();}tLeft--;}
-function ddots(){const box=$("#dots");box.innerHTML="";deck.forEach((q,i)=>{const s=el("i");if(dAns[i])s.classList.add(dAns[i].correct?"done":"wrong");else if(i===cur)s.classList.add("now");box.appendChild(s);});}
-function renderDaily(){const q=deck[cur],answered=!!dAns[cur];ddots();
-  timerRun=!answered; if(answered){$("#timer").classList.add("paused");$("#timer").textContent="⏸ paused";}else{$("#timer").classList.remove("paused");const m=Math.floor(tLeft/60),s=tLeft%60;$("#timer").textContent=m+":"+String(s).padStart(2,"0");}
-  $("#qmeta").innerHTML="";$("#qmeta").append(el("span","chip t",q.topic),el("span","chip "+tierClass(q.tier),q.tier),el("span","chip n","Q"+(cur+1)+" / 10"));
-  $("#qtext").innerHTML=q.q;setReportCtx("g:"+q.genId,"daily",q.q);const A=$("#answers");A.innerHTML="";$("#fbWrap").innerHTML="";dSel=null;
-  if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
-    if(answered){if(o===q.answer)b.classList.add("correct");else if(o===dAns[cur].given&&!dAns[cur].correct)b.classList.add("miss");}
-    else b.onclick=()=>{dSel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});}
-  else{const w=el("div","numin"),inp=el("input");inp.type="text";inp.inputMode="numeric";inp.placeholder="type your answer";inp.autocomplete="off";
-    if(answered){inp.value=dAns[cur].given;inp.disabled=true;}else inp.addEventListener("keydown",e=>{if(e.key==="Enter")lockDaily();});
-    inp.id="dNum";w.appendChild(inp);A.appendChild(w);if(!answered)setTimeout(()=>inp.focus(),40);}
-  if(answered)$("#fbWrap").appendChild(fbBlock(dAns[cur].correct,dAns[cur].marks,q));
+/* ---------- DAILY DUEL (static bank: /daily + /daily-submit) ---------- */
+let DD={qs:[],ans:{},cur:0,submitting:false},tLeft=720,timerId=null,timerRun=false;
+function ddDoneScreen(){show("results");const s=$("#results");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2><span class="link" id="ddHome">← Home</span></div><div class="card" style="text-align:center"><div style="font-size:46px">✅</div><div style="font-family:var(--disp);font-weight:800;font-size:20px;margin-top:6px">Already done today</div><div style="color:var(--muted);margin-top:8px">You've played today's Daily Duel — one shot per day. Fresh 10 tomorrow. Meanwhile, hit <b>Conquest</b>.</div><div style="margin-top:16px"><button class="btn sm" id="ddBoard">See the board →</button></div></div>`;$("#ddHome").onclick=openHub;$("#ddBoard").onclick=()=>openBoard("daily");}
+async function startDaily(){
+  if(dailyDoneToday){ddDoneScreen();return;}
+  show("quiz");$("#qmeta").innerHTML="";$("#qtext").innerHTML=`<div class="spin"></div>`;$("#answers").innerHTML="";$("#fbWrap").innerHTML="";$("#qbtns").innerHTML="";$("#timer").textContent="12:00";
+  let r;try{r=await api("/daily?pin="+encodeURIComponent(ME.pin)+"&day="+today());}catch(e){$("#qtext").innerHTML=`<div class="empty">Couldn't load today's Daily Duel. Check your connection and try again.</div>`;return;}
+  if(r&&r.done){dailyDoneToday=true;ddDoneScreen();return;}
+  if(!r||!r.ok||!r.questions||!r.questions.length){$("#qtext").innerHTML=`<div class="empty">Today's Daily Duel isn't ready yet. Try again shortly.</div>`;return;}
+  DD={qs:r.questions,ans:{},cur:0,submitting:false};_sw=0;tLeft=720;renderDaily();
+  if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);timerRun=true;}
+function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);if(tLeft<=0){timerRun=false;clearInterval(timerId);finishDaily();}tLeft--;}
+function ddots(){const box=$("#dots");box.innerHTML="";DD.qs.forEach((q,i)=>{const s=el("i");const a=DD.ans[q.id];if(a!=null&&a!=="")s.classList.add("done");if(i===DD.cur)s.classList.add("now");box.appendChild(s);});}
+function ddCount(){return DD.qs.filter(q=>{const a=DD.ans[q.id];return a!=null&&a!=="";}).length;}
+function renderDaily(){const q=DD.qs[DD.cur];ddots();
+  $("#qmeta").innerHTML="";$("#qmeta").append(el("span","chip t",q.topic||"Quant"),el("span","chip n","Q"+(DD.cur+1)+" / "+DD.qs.length));
+  $("#qtext").innerHTML=q.stem;setReportCtx(q.id,"daily",q.stem);const A=$("#answers");A.innerHTML="";$("#fbWrap").innerHTML="";
+  const cur=DD.ans[q.id];
+  if(q.type==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
+    if(o===cur)b.classList.add("sel");
+    b.onclick=()=>{DD.ans[q.id]=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");ddots();};A.appendChild(b);});}
+  else{const w=el("div","numin"),inp=el("input");inp.type="text";inp.inputMode="none";inp.readOnly=true;inp.placeholder="tap the keypad";inp.autocomplete="off";
+    inp.value=cur||"";inp.id="dNum";inp.addEventListener("input",()=>{DD.ans[q.id]=inp.value.trim();ddots();});
+    w.appendChild(inp);A.appendChild(w);A.appendChild(numKeypad(inp,()=>{DD.ans[q.id]=inp.value.trim();ddots();}));}
   const btns=$("#qbtns");btns.innerHTML="";const row=el("div","navrow");
-  if(cur>0){const p=el("button","btn ghost sm","← Prev");p.onclick=()=>{cur--;renderDaily();};row.appendChild(p);}
-  if(!answered){const lk=el("button","btn","Lock it in");lk.onclick=lockDaily;row.appendChild(lk);}
-  else if(cur<9){const n=el("button","btn","Next →");n.onclick=()=>{cur++;renderDaily();};row.appendChild(n);}
-  else if(frontier>=10){const f=el("button","btn","See my score →");f.onclick=finishDaily;row.appendChild(f);}
-  else {const n=el("button","btn","Review →");n.onclick=()=>{cur=frontier;renderDaily();};row.appendChild(n);}
+  if(DD.cur>0){const p=el("button","btn ghost sm","← Prev");p.onclick=()=>{DD.cur--;renderDaily();};row.appendChild(p);}
+  if(DD.cur<DD.qs.length-1){const n=el("button","btn","Next →");n.onclick=()=>{DD.cur++;renderDaily();};row.appendChild(n);}
+  else{const f=el("button","btn","Submit Daily Duel →");f.onclick=confirmFinishDaily;row.appendChild(f);}
   btns.appendChild(row);}
-function lockDaily(){const q=deck[cur];let given,correct;
-  if(q.kind==="mcq"){if(dSel==null)return;given=dSel;correct=(dSel===q.answer);}
-  else{const v=($("#dNum").value||"").trim();if(v==="")return;given=v;correct=(Number(v)===Number(q.answer));}
-  const marks=q.kind==="mcq"?(correct?4:-1):(correct?4:0);dAns[cur]={given,correct,marks};if(cur+1>frontier)frontier=cur+1;renderDaily();}
-async function finishDaily(){clearInterval(timerId);
-  const right=dAns.filter(a=>a&&a.correct).length,acc=Math.round(right/10*100),myScore=dAns.reduce((s,a)=>s+(a?a.marks:0),0),timeSec=720-Math.max(0,tLeft);
-  const items=deck.map((q,i)=>({genId:q.genId,topic:q.topic,tier:q.tier,correct:!!(dAns[i]&&dAns[i].correct)}));
-  let srv={streak:"—",xp:"—",rank:null};
-  try{const r=await api("/submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,day:today(),setId:"daily-"+today(),score:myScore,correct:right,total:10,timeSec,items})});if(r.ok)srv=r;}catch(e){}
-  if(srv.streak!=="—")updateStreakPill(srv.streak);
-  const badges=[];if(right===10)badges.push(["🧹","Clean Sweep"]);if(acc>=80)badges.push(["🎯","Sharpshooter"]);
-  const hv=deck.filter((q,i)=>q.tier.startsWith("Heavy")&&dAns[i]&&dAns[i].correct).length;if(hv>=2)badges.push(["💀","Killer Instinct"]);
-  if(srv.streak&&srv.streak!=="—")badges.push(["🔥",srv.streak+"-Day Streak"]);
+function confirmFinishDaily(){const left=DD.qs.length-ddCount();
+  if(left>0){document.querySelectorAll(".tabwarn").forEach(x=>x.remove());const wrap=el("div","modal tabwarn");
+    wrap.innerHTML=`<div class="box"><h3>Submit now?</h3><p>You've left <b>${left}</b> question${left>1?"s":""} blank. Blank answers score 0 — one shot per day, no re-runs.</p><div class="mbtns"><button class="btn ghost sm" id="_ddCancel" style="flex:1">Keep solving</button><button class="btn sm" id="_ddGo" style="flex:1">Submit anyway</button></div></div>`;
+    document.body.appendChild(wrap);wrap.querySelector("#_ddCancel").onclick=()=>wrap.remove();wrap.querySelector("#_ddGo").onclick=()=>{wrap.remove();finishDaily();};return;}
+  finishDaily();}
+async function finishDaily(){if(DD.submitting)return;DD.submitting=true;timerRun=false;clearInterval(timerId);
+  const timeSec=720-Math.max(0,tLeft);
+  const s=$("#results");show("results");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2></div><div class="card" style="text-align:center"><div class="spin"></div><div style="color:var(--muted);margin-top:10px">Scoring your run…</div></div>`;
+  let r;try{r=await api("/daily-submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,day:today(),answers:DD.ans,timeSec})});}catch(e){r=null;}
+  if(!r||!r.ok){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2><span class="link" id="ddHome">← Home</span></div><div class="card"><div class="empty">Your answers didn't reach the server (connection dropped). Your Daily Duel wasn't recorded — reopen it to try again.</div></div>`;$("#ddHome").onclick=openHub;DD.submitting=false;return;}
+  dailyDoneToday=true;const dailyGo=$("#dailyGo");if(dailyGo)dailyGo.outerHTML=`<span class="pill">✓ done</span>`;
+  const detail=r.detail||[],total=r.total||detail.length||10,right=r.correct||0,myScore=r.score||0,acc=total?Math.round(right/total*100):0;
+  if(r.streak!=null)updateStreakPill(r.streak);
+  const badges=[];if(total&&right===total)badges.push(["🧹","Clean Sweep"]);if(acc>=80)badges.push(["🎯","Sharpshooter"]);
+  if(r.streak&&r.streak>=1)badges.push(["🔥",r.streak+"-Day Streak"]);
   const cutPct=64,myPct=Math.min(98,Math.round(acc*0.9+(myScore>0?10:0))),weeks=myPct>=cutPct?"You're above the line. Stay there.":Math.max(2,Math.ceil((cutPct-myPct)/6))+" weeks at this pace to clear the cutoff.";
-  const rankLine=srv.rank?`#${srv.rank}${srv.of?" of "+srv.of:""} today · `:"";
-  const cpGain=deck.reduce((sm,q,i)=>sm+((dAns[i]&&dAns[i].correct)?(TW[q.tier]||1):0),0);
-  const s=$("#results");s.innerHTML="";s.append(el("div","section-h","<h2>Daily Duel · done</h2><span class='link' id='toBoard'>Leaderboard →</span>"));
-  const c=el("div","card pop");c.innerHTML=`<div class="scorebig tnum">${myScore}<span class="slash"> / 40</span></div><div class="resline">${rankLine}${right}/10 correct · ${acc}%</div>
-    <div class="rewards"><div class="reward xp"><div class="n tnum">+${cpGain}</div><div class="l">Conquest pts</div></div><div class="reward st"><div class="n tnum">${srv.streak} ${srv.streak===1?"day":"days"}</div><div class="l">Streak</div></div></div>
+  const rankLine=r.rank?`#${r.rank}${r.of?" of "+r.of:""} today · `:"";
+  const cpGain=detail.reduce((sm,d)=>sm+(d.correct?(TW[d.tier]||2):0),0);
+  s.innerHTML="";s.append(el("div","section-h","<h2>Daily Duel · done</h2><span class='link' id='toBoard'>Leaderboard →</span>"));
+  const c=el("div","card pop");c.innerHTML=`<div class="scorebig tnum">${myScore}<span class="slash"> / ${total*4}</span></div><div class="resline">${rankLine}${right}/${total} correct · ${acc}%</div>
+    <div class="rewards"><div class="reward xp"><div class="n tnum">+${cpGain}</div><div class="l">Conquest pts</div></div><div class="reward st"><div class="n tnum">${r.streak} ${r.streak===1?"day":"days"}</div><div class="l">Streak</div></div></div>
     <div class="badges">${badges.map(b=>`<span class="badge"><span class="e">${b[0]}</span>${b[1]}</span>`).join("")}</div>
     <div class="aspire"><div class="t"><span>You vs IIM Indore QA cutoff</span><span class="mono">${myPct}%ile</span></div><div class="track"><div class="cut" style="left:${cutPct}%"><b>cutoff</b></div><div class="fillbar" id="fill"></div></div><div class="msg">${weeks}</div></div>`;
   s.append(c);
-  const miss=10-right;const c2=el("div","card");c2.style.marginTop="14px";c2.innerHTML=`<div style="font-weight:800;margin-bottom:4px">${right>=8?"Big day. The board's about to feel it.":right>=5?"Solid. Go steal some ranks.":"Rough round — the streak lives."}</div><div style="color:var(--muted);font-size:14px">${miss>0?`You missed ${miss}. `:""}Fix them in <span class="link" id="toExtra" style="cursor:pointer">Reconquer →</span></div>`;
-  s.append(c2);show("results");setTimeout(()=>{const f=$("#fill");if(f)f.style.width=myPct+"%";},160);
-  $("#toBoard").onclick=()=>openBoard("daily");$("#toExtra").onclick=openExtra;}
+  const miss=total-right;const c2=el("div","card");c2.style.marginTop="14px";c2.innerHTML=`<div style="font-weight:800;margin-bottom:4px">${right>=8?"Big day. The board's about to feel it.":right>=5?"Solid. Go steal some ranks.":"Rough round — the streak lives."}</div><div style="color:var(--muted);font-size:14px">${miss>0?`You missed ${miss}. Study them below, then `:""}<span class="link" id="toExtra" style="cursor:pointer">Reconquer your misses →</span></div>`;
+  s.append(c2);
+  const rev=el("div","card");rev.style.marginTop="14px";rev.innerHTML=`<div style="font-weight:800;margin-bottom:10px">Solutions</div>`;
+  detail.forEach((d,i)=>{const row=el("div","revq");
+    row.innerHTML=`<div class="revh"><span class="chip ${d.correct?'ok':'no'}">${d.correct?'✓':'✗'} Q${i+1}</span><span class="chip t">${d.topic||"Quant"}</span></div>
+      <div class="revstem">${d.stem}</div>
+      <div class="revans">${d.correct?`<span class="ok">Correct — ${d.given}</span>`:`<span class="no">Your answer: ${d.given||"—"}</span> · <span class="ok">Answer: ${d.answer}</span>`}</div>
+      ${d.solution?`<div class="sol">${d.solution}</div>`:""}`;
+    rev.appendChild(row);});
+  s.append(rev);show("results");setTimeout(()=>{const f=$("#fill");if(f)f.style.width=myPct+"%";},160);
+  $("#toBoard").onclick=()=>openBoard("daily");$("#toExtra").onclick=openExtra;DD.submitting=false;}
 /* ---------- RECONQUER (3 variants per missed question) ---------- */
 let ex={list:[],i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};
 async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
