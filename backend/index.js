@@ -173,6 +173,10 @@ async function leaderboard(url, env) {
     rows = (await env.DB.prepare(
       `SELECT s.name, s.batch, p.current_streak score FROM progress p JOIN students s ON s.pin=p.pin
        ORDER BY p.current_streak DESC LIMIT 50`).all()).results;
+  } else if (type === "conquest") {
+    rows = (await env.DB.prepare(
+      `SELECT s.name, s.batch, COALESCE(SUM(CASE WHEN q.correct=1 THEN ${tierWeightSQL} ELSE 0 END),0) score
+       FROM q_log q JOIN students s ON s.pin=q.pin GROUP BY q.pin HAVING score>0 ORDER BY score DESC LIMIT 50`).all()).results;
   } else if (type === "batch") {
     rows = (await env.DB.prepare(
       `SELECT s.batch name, s.batch, ROUND(AVG(a.score),1) score FROM attempts a JOIN students s ON s.pin=a.pin

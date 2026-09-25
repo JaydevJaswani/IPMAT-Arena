@@ -117,6 +117,9 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .pmeter{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .pmeter .rg{flex:1;height:12px;border-radius:999px;background:var(--card2);border:1.5px solid var(--line);overflow:hidden}.pmeter .rg i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .4s}
 .pmeter .lbl{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--muted)}
+.kpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;max-width:300px;margin-left:auto;margin-right:auto}
+.kpad button{padding:15px 0;font-size:20px;font-family:var(--mono);font-weight:700;background:var(--card2);border:1.5px solid var(--line);border-radius:12px;color:var(--ink);transition:transform .06s}
+.kpad button:active{transform:scale(.95)}.kpad button.act{color:var(--primary)}
 .nudge{display:flex;align-items:center;gap:8px;width:100%;text-align:left;margin-top:14px;padding:13px 15px;border-radius:14px;font-weight:700;font-size:13.5px;border:1.5px solid var(--amber);background:color-mix(in srgb,var(--amber) 14%,#fff);color:var(--ink);box-shadow:var(--shadow)}
 .nudge.hot{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,#fff)}
 .nudge b{font-weight:800}.nudge .pl{margin-left:auto;color:var(--primary);white-space:nowrap}
@@ -161,7 +164,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   <section id="practice" hidden></section>
   <section id="board" hidden>
     <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2></div>
-    <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily Duel</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button><button class="tab" data-t="batch">Batch vs Batch</button></div>
+    <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily Duel</button><button class="tab" data-t="conquest">Conquest Pts</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button></div>
     <div class="card"><div class="league"><div class="crest">🏆</div><div><div class="nm">Gold League</div><div class="sub" id="leagueSub">Same 10 for everyone — fair by design.</div></div></div><div id="rows"></div></div>
     <p class="foot">IPMAT Arena · IMS Ahmedabad · <i>Trusted for Success</i></p>
   </section>
@@ -177,7 +180,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 const CONFIG={API:"https://ipmat-arena.jaydev-jaswani.workers.dev"};
 const $=s=>document.querySelector(s),el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
 const today=()=>new Date().toISOString().slice(0,10);
-let ME=null;
+let ME=null,dailyDoneToday=false;
 async function api(path,opts){const r=await fetch(CONFIG.API+path,opts);return r.json();}
 function saveSession(){try{sessionStorage.setItem("ims_arena",JSON.stringify(ME));}catch(e){}}
 function loadSession(){try{const s=sessionStorage.getItem("ims_arena");if(s)ME=JSON.parse(s);}catch(e){}}
@@ -309,7 +312,7 @@ async function openHub(){
     const cb=m.comeback;$("#hCB").textContent=cb.total?cb.resolved+"/"+cb.total:"0";
     $("#hCBsub").innerHTML=cb.total?`${cb.redos} extra solves · batch avg ${cb.peerAvg}${cb.redos>cb.peerAvg?' · <b style="color:var(--good)">ahead</b>':''}`:"no misses yet — nice";
     $("#extraGo").outerHTML=cb.open>0?`<span class="pill warn">${cb.open} to fix</span>`:`<span class="go">→</span>`;
-    if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="pill">✓ done</span>`;
+    dailyDoneToday=!!m.dailyDone;if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="pill">✓ done</span>`;
     const nz=$("#streakNudge");
     if(m.dailyDone){nz.innerHTML="";}
     else{const eve=new Date().getHours()>=17,st=m.streak||0;
@@ -384,6 +387,7 @@ async function openPractice(topic,level){
 function mkStatic(s){return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};}
 function mkGen(topic,level){const g=pick(genByTL(topic,level));const q=g.make();return {kind:q.kind,stem:q.q,options:q.options,answer:q.answer,sol:q.sol,trap:q.trap,_gen:g.id};}
 function pServe(){if(PS.mastered>=PS.goal){pFinish();return;}PS.cur=PS.queue[PS.i];PS.answered=false;PS.sel=null;pRender();}
+function numKeypad(inp){const k=el("div","kpad");["1","2","3","4","5","6","7","8","9","C","0","⌫"].forEach(d=>{const b=el("button",(d==="C"||d==="⌫")?"act":"",d);b.type="button";b.onclick=()=>{if(d==="C")inp.value="";else if(d==="⌫")inp.value=inp.value.slice(0,-1);else inp.value+=d;};k.appendChild(b);});return k;}
 function pRender(){
   const q=PS.cur,s=$("#practice"),stem=q.stem;
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);
@@ -396,8 +400,8 @@ function pRender(){
   if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
     if(PS.answered){if(o===PS.correctAns)b.classList.add("correct");else if(o===PS.sel&&o!==PS.correctAns)b.classList.add("miss");}
     else b.onclick=()=>{PS.sel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});}
-  else{const w=el("div","numin"),inp=el("input");inp.id="pNum";inp.type="text";inp.inputMode="numeric";inp.placeholder="type your answer";
-    if(PS.answered){inp.value=PS.sel;inp.disabled=true;}else inp.addEventListener("keydown",e=>{if(e.key==="Enter")pCheck();});w.appendChild(inp);A.appendChild(w);if(!PS.answered)setTimeout(()=>inp.focus(),40);}
+  else{const w=el("div","numin"),inp=el("input");inp.id="pNum";inp.type="text";inp.inputMode="none";inp.readOnly=true;inp.placeholder="tap the keypad";
+    if(PS.answered){inp.value=PS.sel;}w.appendChild(inp);A.appendChild(w);if(!PS.answered)A.appendChild(numKeypad(inp));}
   if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
   const B=$("#pB");
   if(!PS.answered){const c=el("button","btn","Check");c.onclick=pCheck;B.appendChild(c);}
@@ -463,7 +467,9 @@ function buildDaily(){RNG=mulberry32(seedFor("daily-"+today()));
   const byTier=t=>G.filter(g=>g.tier===t),want=[["Warm-Up",4],["Exam-Relevant",3],["Heavy & Tricky",3]],chosen=[];
   want.forEach(([t,c])=>{const pool=shuffle(byTier(t));for(let i=0;i<c;i++)chosen.push(pool[i%pool.length]);});
   deck=chosen.map(g=>({...g.make(),topic:g.topic,tier:g.tier,genId:g.id}));RNG=Math.random;cur=0;frontier=0;dAns=[];}
-function startDaily(){_sw=0;buildDaily();show("quiz");tLeft=720;renderDaily();if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);}
+function startDaily(){
+  if(dailyDoneToday){show("results");const s=$("#results");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Daily Duel</h2><span class="link" id="ddHome">← Home</span></div><div class="card" style="text-align:center"><div style="font-size:46px">✅</div><div style="font-family:var(--disp);font-weight:800;font-size:20px;margin-top:6px">Already done today</div><div style="color:var(--muted);margin-top:8px">You've played today's Daily Duel — one shot per day. Fresh 10 tomorrow. Meanwhile, hit <b>Conquest</b>.</div><div style="margin-top:16px"><button class="btn sm" id="ddBoard">See the board →</button></div></div>`;$("#ddHome").onclick=openHub;$("#ddBoard").onclick=()=>openBoard("daily");return;}
+  _sw=0;buildDaily();show("quiz");tLeft=720;renderDaily();if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);}
 function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);t.classList.remove("paused");if(tLeft<=0){clearInterval(timerId);finishDaily();}tLeft--;}
 function ddots(){const box=$("#dots");box.innerHTML="";deck.forEach((q,i)=>{const s=el("i");if(dAns[i])s.classList.add(dAns[i].correct?"done":"wrong");else if(i===cur)s.classList.add("now");box.appendChild(s);});}
 function renderDaily(){const q=deck[cur],answered=!!dAns[cur];ddots();
@@ -606,7 +612,7 @@ async function openReview(id){show("testresults");const s=$("#testresults");s.in
 const AVC=["#FF4D2E","#2E6BFF","#FF9F1C","#7C5CFF","#08C08A","#FF3D8B","#08B981","#B14BFF"];
 async function openBoard(type){show("board");[...$("#tabs").children].forEach(t=>t.classList.toggle("on",t.dataset.t===type));
   const box=$("#rows");box.innerHTML=`<div class="spin"></div>`;
-  const subs={daily:"Same 10 for everyone — fair by design.",accuracy:"Ranked by % correct — climbers welcome.",streak:"Longest active streak wins.",batch:"Batch average — carry your squad."};$("#leagueSub").textContent=subs[type]||"";
+  const subs={daily:"Same 10 for everyone — fair by design.",conquest:"Total Conquest Points — harder levels, more points.",accuracy:"Ranked by % correct — climbers welcome.",streak:"Longest active streak wins."};$("#leagueSub").textContent=subs[type]||"";
   try{const r=await api("/leaderboard?type="+type+"&day="+today()+"&pin="+encodeURIComponent(ME.pin));
     if(!r.ok||!r.rows.length){box.innerHTML=`<div class="empty">No scores yet today.<br>Be the first — play the Daily Duel.</div>`;return;}
     box.innerHTML="";
