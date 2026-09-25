@@ -203,7 +203,7 @@ const G=[
  {id:"g7",topic:"Number Theory",tier:"Heavy & Tricky",make(){const p=pick([7,11,13,17]),a=p-1,n=pick([50,80,99,100,101,150]),ans=n%2===0?1:p-1;return{kind:"int",answer:ans,q:`Find the remainder when ${a}${sup(n)} is divided by ${p}.`,trap:`${a}≡−1 (mod ${p}). Even→+1, odd→−1.`,sol:`${a}≡−1 ⇒ (−1)${sup(n)}=${n%2===0?"+1":"−1"}≡${ans} (mod ${p}).`};}},
  {id:"g8",topic:"Surds & Indices",tier:"Warm-Up",make(){const b=pick([2,3,5,6,7]),a=b+2,ans=`√${a}`,opts=shuffle([`√${a}`,`√${b}`,`2√${a}`,`${a-b}`]);return{kind:"mcq",answer:ans,options:opts,q:`Simplify:  1/(√${a} + √${b}) + 1/(√${a} − √${b}).`,trap:`Combine over (√${a})²−(√${b})²=${a-b}.`,sol:`=2√${a}/${a-b}=√${a}.`};}},
  {id:"g9",topic:"Surds & Indices",tier:"Heavy & Tricky",make(){const items=[{i:"7 + 4√3",o:"2 + √3",w:["3 + √2","4 + √3","2 + 2√3"]},{i:"7 − 4√3",o:"2 − √3",w:["√3 − 2","3 − √2","2 − 2√3"]},{i:"11 + 6√2",o:"3 + √2",w:["2 + 3√2","√2 + 3√3","3 + 2√2"]},{i:"8 + 2√15",o:"√5 + √3",w:["√8 + √15","4 + √15","√6 + √2"]}],it=pick(items),opts=shuffle([it.o,...it.w]);return{kind:"mcq",answer:it.o,options:opts,q:`Find the value of  √(${it.i}).`,trap:`Write x+y√z as (√a+√b)².`,sol:`(${it.o})² = ${it.i}. ✓`};}},
- {id:"g10",topic:"Number System",tier:"Heavy & Tricky",make(){const c=pick([{H:12,P:10368,k:72,n:2},{H:6,P:1080,k:30,n:4},{H:5,P:1500,k:60,n:4},{H:4,P:1600,k:100,n:4}]);return{kind:"int",answer:c.n,q:`The HCF of two numbers is ${c.H} and their product is ${c.P}. How many unordered pairs of such numbers are possible?`,trap:`Numbers=${c.H}m,${c.H}n, gcd(m,n)=1. Count coprime pairs.`,sol:`m·n=${c.P}/${c.H}²=${c.k}. Coprime pairs = 2^(distinct primes−1)=${c.n}.`};}},
+ {id:"g10",topic:"Number System",tier:"Heavy & Tricky",make(){const c=pick([{H:12,P:10368,k:72,n:2},{H:6,P:1080,k:30,n:4},{H:5,P:1500,k:60,n:4},{H:4,P:1600,k:100,n:2}]);return{kind:"int",answer:c.n,q:`The HCF of two numbers is ${c.H} and their product is ${c.P}. How many unordered pairs of such numbers are possible?`,trap:`Numbers=${c.H}m,${c.H}n, gcd(m,n)=1. Count coprime pairs.`,sol:`m·n=${c.P}/${c.H}²=${c.k}. Coprime pairs = 2^(distinct primes−1)=${c.n}.`};}},
  {id:"g11",topic:"Number System",tier:"Warm-Up",make(){const diff=R(1,4),b=R(1,9-diff),a=b+diff,S=a+b,D=9*diff,num=10*a+b;return{kind:"int",answer:num,q:`A two-digit number has digits that add up to ${S}. Subtracting ${D} from it reverses its digits. Find the number.`,trap:`a+b=${S}, a−b=${diff}.`,sol:`a=${a}, b=${b} ⇒ ${num}.`};}},
  {id:"g12",topic:"Percentages",tier:"Warm-Up",make(){const c=pick([[10,10],[10,20],[20,10],[20,20],[20,25],[25,20],[50,10],[50,20],[40,25],[25,40]]),up=c[0],dn=c[1],after=Math.round(100*(1+up/100)*(1-dn/100)),net=after-100;return{kind:"int",answer:net,q:`A price is increased by ${up}% then decreased by ${dn}%. Net percentage change is ___ % (enter a negative number for a decrease).`,trap:`Successive % don't add. Net=${up}−${dn}−${up}·${dn}/100.`,sol:`100 → ${100+up} → ${after}. Net = ${net}%.`};}},
  {id:"g13",topic:"Averages & Ratio",tier:"Exam-Relevant",make(){const n=pick([5,6,8,10]),avg=R(20,40),k=pick([-3,-2,-1,1,2,3]),wrong=R(35,70),right=wrong+k*n,na=avg+k;return{kind:"int",answer:na,q:`The average of ${n} numbers is ${avg}. One value was misread as ${wrong} instead of the correct ${right}. Find the corrected average.`,trap:`Only the sum changes, by (${right}−${wrong}); spread it over ${n}.`,sol:`Corrected = ${avg} + (${right}−${wrong})/${n} = ${avg} ${k>=0?"+ "+k:"− "+(-k)} = ${na}.`};}},
@@ -390,7 +390,7 @@ function pRender(){
   const pct=Math.round(PS.mastered/PS.goal*100),retry=PS.i>=PS.goal;
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(PS.topic)}</h2><span class="link" id="pBack">← Map</span></div>
     <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Mastered ${PS.mastered}/${PS.goal} · ${LVLNAME[PS.level]}</div></div>
-    <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span>${retry?`<span class="chip heavy">↺ retry · fresh values</span>`:""}</div>
+    <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span>${retry?`<span class="chip heavy">↺ retry the ones you missed</span>`:""}</div>
     <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
   $("#pBack").onclick=openHub;const A=$("#pA");
   if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
@@ -401,7 +401,8 @@ function pRender(){
   if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
   const B=$("#pB");
   if(!PS.answered){const c=el("button","btn","Check");c.onclick=pCheck;B.appendChild(c);}
-  else{const done=PS.mastered>=PS.goal,n=el("button","btn",done?"Finish — cleared →":(PS.lastCorrect?"Next →":"Retry this one →"));n.onclick=()=>{PS.i++;pServe();};B.appendChild(n);}
+  else{const done=PS.mastered>=PS.goal,n=el("button","btn",done?"Finish — cleared →":(PS.lastCorrect?"Next →":"Retry this one →"));n.onclick=()=>{PS.i++;pServe();};B.appendChild(n);
+    if(!done&&!PS.lastCorrect&&(PS.cur._tries||0)>=3){const sk=el("button","btn ghost sm","⚑ Looks wrong? Flag & skip");sk.onclick=pFlagSkip;B.appendChild(sk);}}
 }
 async function pCheck(){
   const q=PS.cur;let given;
@@ -413,8 +414,15 @@ async function pCheck(){
   else{try{const r=await api("/pgrade",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,items:[{id:q._static,given}]})});const d=(r.detail&&r.detail[0])||{};correct=!!d.correct;correctAns=d.answer;sol=d.solution;}catch(e){}}
   PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;PS.attempts++;
   if(correct){PS.mastered++;PS.detail.push({stem:q.stem,options:q.kind==="mcq"?q.options:null,given,correct:true,answer:correctAns,solution:sol});}
-  else{PS.queue.push(PS.hasGen?mkGen(PS.topic,PS.level):q);}   // miss returns (fresh values if a generator exists)
+  else{q._tries=(q._tries||0)+1;PS.queue.push(q);}   // the EXACT same question returns until it's answered right
   pRender();
+}
+function pFlagSkip(){
+  const q=PS.cur;
+  api("/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,qkey:q._gen?("g:"+q._gen):q._static,source:"conquest-stuck",stem:q.stem,note:"student stuck 3+ times — please verify the answer"})}).catch(()=>{});
+  const dup=PS.queue.lastIndexOf(q);if(dup>PS.i)PS.queue.splice(dup,1);
+  PS.mastered++;PS.detail.push({stem:q.stem,options:q.kind==="mcq"?q.options:null,given:PS.sel,correct:false,answer:PS.correctAns,solution:PS.lastSol,flagged:true});
+  PS.i++;pServe();
 }
 async function pFinish(){
   const s=$("#practice");
