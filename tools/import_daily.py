@@ -17,13 +17,16 @@ for n in zipfile.ZipFile(FIG).namelist():
     figmap[n.split("_")[0]] = n
 
 lines = ["DELETE FROM questions WHERE test_id='daily-bank';"]
-n = 0; sk_rev = sk_mcq = sk_dec = 0
+n = 0; sk_rev = sk_mcq = sk_dec = sk_fig = 0
 for _, r in df.iterrows():
     if pd.notna(r.get("Review Flag")): sk_rev += 1; continue
     qid = clean(r["Q_ID"]); topic = clean(r["Subtopic"]) if pd.notna(r.get("Subtopic")) else clean(r.get("Topic", ""))
     stem = clean(r["Question"])
-    if clean(r.get("Figure Needed", "")).lower() == "yes" and qid in figmap:
-        stem += f'<div style="margin-top:12px"><img src="img/{figmap[qid]}" alt="figure" style="max-width:100%;border-radius:12px"></div>'
+    # NOTE: QA_Figures.zip images are full slide screenshots that include the printed
+    # solution + answer, so embedding them leaks the answer. Skip figure-needed rows until
+    # clean, cropped diagrams are supplied. Re-enable by cropping figures then embedding here.
+    if clean(r.get("Figure Needed", "")).lower() == "yes":
+        sk_fig += 1; continue
     typ = clean(r["Type"]).upper()
     if typ == "MCQ":
         opts = [clean(r[c]) for c in ("Option A", "Option B", "Option C", "Option D")]
@@ -41,4 +44,4 @@ for _, r in df.iterrows():
         + f"{esc('daily-bank:'+qid)},'daily-bank',{n},{esc(topic)},'Exam-Relevant',{esc(qtype)},'auto',{esc(stem)},{esc(options)},{esc(ans)},{esc(ans)},{esc(sol)},NULL,'QA-Bank'"+");")
 OUT.write_text("\n".join(lines) + "\n")
 print(f"Daily Duel bank: {n} questions imported")
-print(f"  skipped: {sk_rev} review-flagged, {sk_mcq} bad-MCQ, {sk_dec} non-whole TITA")
+print(f"  skipped: {sk_rev} review-flagged, {sk_fig} figure-needed (answer-leaking slides), {sk_mcq} bad-MCQ, {sk_dec} non-whole TITA")
