@@ -485,6 +485,7 @@ async function startDaily(){
   if(saved&&typeof saved.tLeft==="number"&&saved.tLeft>0){DD.ans=saved.ans||{};DD.cur=Math.min(Math.max(0,saved.cur||0),DD.qs.length-1);_sw=saved.sw||0;tLeft=saved.tLeft;resumed=Object.keys(DD.ans).length>0;}
   else{_sw=0;tLeft=720;}
   renderDaily();if(resumed)ddToast("↺ Resumed where you left off");
+  {const m=Math.floor(tLeft/60),s=tLeft%60;$("#timer").textContent=m+":"+String(s).padStart(2,"0");$("#timer").classList.toggle("low",tLeft<=60);}
   if(timerId)clearInterval(timerId);timerId=setInterval(dtick,1000);timerRun=true;}
 function dtick(){if(!timerRun)return;const m=Math.floor(tLeft/60),s=tLeft%60,t=$("#timer");t.textContent=m+":"+String(s).padStart(2,"0");t.classList.toggle("low",tLeft<=60);if(tLeft<=0){timerRun=false;clearInterval(timerId);finishDaily();return;}tLeft--;if(tLeft%3===0)ddSave();}
 function ddots(){const box=$("#dots");box.innerHTML="";DD.qs.forEach((q,i)=>{const s=el("i");const a=DD.ans[q.id];if(a!=null&&a!=="")s.classList.add("done");if(i===DD.cur)s.classList.add("now");box.appendChild(s);});}
