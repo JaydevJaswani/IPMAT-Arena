@@ -71,6 +71,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .chip{font-size:11.5px;font-weight:800;letter-spacing:.03em;padding:5px 11px;border-radius:999px}
 .chip.t{color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,#fff)}.chip.warm{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.exam{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,#fff)}.chip.heavy{color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,#fff)}.chip.n{color:var(--muted);background:var(--card2)}.chip.ok{color:var(--green);background:color-mix(in srgb,var(--green) 14%,#fff)}.chip.no{color:var(--bad,#e5484d);background:color-mix(in srgb,var(--bad,#e5484d) 12%,#fff)}
 .revq{border-top:1px solid var(--line);padding:14px 0}.revq:first-of-type{border-top:none;padding-top:2px}.revh{display:flex;gap:6px;margin-bottom:8px}.revstem{font-size:14px;line-height:1.5;margin-bottom:8px}.revstem img{max-width:100%;border-radius:12px;margin-top:8px}.revans{font-size:13.5px;font-weight:700;margin-bottom:6px}.revans .ok{color:var(--green)}.revans .no{color:var(--bad,#e5484d)}.revq .sol{color:var(--ink);font-size:12.5px;white-space:pre-line;font-family:var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;line-height:1.6}
+.onesit{background:color-mix(in srgb,var(--amber) 12%,#fff);border:1px solid color-mix(in srgb,var(--amber) 35%,#fff);color:#8a5a00;font-size:12.5px;line-height:1.5;border-radius:12px;padding:9px 12px;margin:10px 0 12px}
 .ddtoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;padding:11px 18px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.28);opacity:0;transition:opacity .3s,transform .3s;z-index:9999;pointer-events:none;max-width:90vw;text-align:center}.ddtoast.in{opacity:1;transform:translateX(-50%) translateY(0)}
 .qtext{font-size:20px;font-family:var(--disp);font-weight:600;line-height:1.32;letter-spacing:-.01em}.qtext sup{font-size:.68em}
 .answers{margin-top:18px;display:grid;gap:10px}
@@ -247,7 +248,16 @@ function show(id){["login","hub","quiz","results","tests","testplay","testresult
   $("#homeBtn").hidden=!(ME&&id!=="hub"&&id!=="login");
   $("#reportFab").hidden=!["quiz","testplay","extra","practice"].includes(id);
   window.scrollTo({top:0,behavior:"instant"});}
-$("#homeBtn").onclick=()=>openHub();
+$("#homeBtn").onclick=()=>leaveConquestGuard(openHub);
+function leaveConquestGuard(go){
+  if($("#practice").hidden||!PS||PS.attempts<1||PS.mastered>=PS.goal){go();return;}
+  document.querySelectorAll(".tabwarn").forEach(x=>x.remove());
+  const wrap=el("div","modal tabwarn");
+  wrap.innerHTML=`<div class="box"><h3>Leave this level?</h3><p>You've mastered <b>${PS.mastered}/${PS.goal}</b>. Conquest levels must be done in <b>one sitting</b> — leave now and this level <b>starts over</b> (nothing saves until ${PS.goal}/${PS.goal}).</p><div class="mbtns"><button class="btn ghost sm" id="_lcStay" style="flex:1">Keep going</button><button class="btn sm" id="_lcGo" style="flex:1">Leave &amp; reset</button></div></div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector("#_lcStay").onclick=()=>wrap.remove();
+  wrap.querySelector("#_lcGo").onclick=()=>{wrap.remove();go();};
+}
 /* tab-switch watch — notify on return; log + auto-submit for Daily Duel & Drills */
 let _leftAt=null,_leftKind=null,_sw=0;const TAB_GRACE=6;
 function _activeKind(){if(!$("#quiz").hidden)return"duel";if(!$("#testplay").hidden)return"drill";if(!$("#practice").hidden||!$("#extra").hidden)return"soft";return null;}
@@ -398,9 +408,10 @@ function pRender(){
   const pct=Math.round(PS.mastered/PS.goal*100),retry=PS.i>=PS.goal;
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>${dName(PS.topic)}</h2><span class="link" id="pBack">← Map</span></div>
     <div class="pmeter"><div class="rg"><i style="width:${pct}%"></i></div><div class="lbl">Mastered ${PS.mastered}/${PS.goal} · ${LVLNAME[PS.level]}</div></div>
+    <div class="onesit">⚠️ <b>One sitting only.</b> Get all ${PS.goal} right to clear this level — leave before that and it <b>starts over</b> (nothing saves until ${PS.goal}/${PS.goal}).</div>
     <div class="card"><div class="qmeta"><span class="chip t">${dName(PS.topic)}</span><span class="chip ${tierClass(PS.tier)}">${LVLNAME[PS.level]} level</span>${retry?`<span class="chip heavy">↺ retry the ones you missed</span>`:""}</div>
     <div class="qtext">${stem}</div><div class="answers" id="pA"></div><div id="pFb"></div><div class="navrow" id="pB"></div></div>`;
-  $("#pBack").onclick=openHub;const A=$("#pA");
+  $("#pBack").onclick=()=>leaveConquestGuard(openHub);const A=$("#pA");
   if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
     if(PS.answered){if(o===PS.correctAns)b.classList.add("correct");else if(o===PS.sel&&o!==PS.correctAns)b.classList.add("miss");}
     else b.onclick=()=>{PS.sel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});}
@@ -553,10 +564,17 @@ async function submitDaily(){if(_ddSending)return;_ddSending=true;
   $("#toBoard").onclick=()=>openBoard("daily");$("#toExtra").onclick=openExtra;DD.submitting=false;}
 /* ---------- RECONQUER (3 variants per missed question) ---------- */
 let ex={list:[],i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};
-async function openExtra(){show("extra");const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
+function exKey(){return "rc:"+(ME?ME.pin:"?");}
+function exSave(){try{localStorage.setItem(exKey(),JSON.stringify(ex));}catch(e){}}
+function exLoad(){try{const s=localStorage.getItem(exKey());return s?JSON.parse(s):null;}catch(e){return null;}}
+function exClear(){try{localStorage.removeItem(exKey());}catch(e){}}
+async function openExtra(){show("extra");const s=$("#extra");
+  const saved=exLoad();
+  if(saved&&saved.list&&saved.list.length&&saved.i<saved.list.length){ex=saved;exRender();ddToast("↺ Resumed — picking up your Reconquer");return;}
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let r;try{r=await api("/extra?pin="+encodeURIComponent(ME.pin));}catch(e){s.querySelector(".card").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
-  if(!r.ok||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily Duel to find your next challenge.</div></div>`;return;}
-  ex={list:r.wrongs.slice(0,5),i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};exRender();}
+  if(!r.ok||!r.wrongs.length){exClear();s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily Duel to find your next challenge.</div></div>`;return;}
+  ex={list:r.wrongs.slice(0,5),i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};exSave();exRender();}
 function exGen(){const w=ex.list[ex.i];return (w.gen_id&&GBYID[w.gen_id])?GBYID[w.gen_id]:genForTopic(w.topic);}
 function exRender(){const s=$("#extra"),w=ex.list[ex.i];
   if(!ex.cur){const gen=exGen();ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
@@ -575,7 +593,8 @@ function exRender(){const s=$("#extra"),w=ex.list[ex.i];
   if(ex.answered)$("#exFb").appendChild(fbBlock(ex.lastCorrect,null,q));
   const btns=$("#exBtns");
   if(!ex.answered){const lk=el("button","btn","Check");lk.onclick=exLock;btns.appendChild(lk);}
-  else{const lastV=ex.v>=2,lastW=ex.i>=ex.list.length-1,label=lastV?(lastW?"Finish":"Next mistake →"):"Next variant →";const n=el("button","btn",label);n.onclick=exNext;btns.appendChild(n);}}
+  else{const lastV=ex.v>=2,lastW=ex.i>=ex.list.length-1,label=lastV?(lastW?"Finish":"Next mistake →"):"Next variant →";const n=el("button","btn",label);n.onclick=exNext;btns.appendChild(n);}
+  exSave();}
 function exLock(){const q=ex.cur;let correct;
   if(q.kind==="mcq"){if(ex.sel==null)return;correct=(ex.sel===q.answer);}
   else{const v=($("#exNum").value||"").trim();if(v==="")return;ex.sel=v;correct=(Number(v)===Number(q.answer));}
@@ -584,6 +603,7 @@ async function exNext(){
   if(ex.v<2){ex.v++;ex.cur=null;exRender();return;}
   const w=ex.list[ex.i];ex.items.push({qkey:w.qkey,genId:ex.curGen,topic:w.topic,tier:w.tier,correct:ex.setCorrect>=2});
   if(ex.i<ex.list.length-1){ex.i++;ex.v=0;ex.setCorrect=0;ex.cur=null;exRender();return;}
+  exClear();   // whole set done — don't resume a finished session
   const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
   let resolved=0;try{const r=await api("/redo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:ex.items})});if(r.ok)resolved=r.resolved;}catch(e){}
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquered</h2><span class="link" id="exHome">← Home</span></div>
