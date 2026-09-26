@@ -135,21 +135,25 @@ async function dailySubmit(req, env){
     return {id,stem:q.stem,options:q.options?JSON.parse(q.options):null,given:given||"",correct:ok,answer:q.answer_display||q.answer,solution:q.solution,topic:q.topic,tier:q.tier};
   }).filter(Boolean);
   const total=detail.length, timeSec=b.timeSec|0;
+  let outStreak=null;
   if(!prior){
-    await env.DB.prepare("INSERT INTO attempts (pin,set_id,day,score,correct,total,time_sec) VALUES (?,?,?,?,?,?,?) ON CONFLICT(pin,set_id) DO NOTHING")
-      .bind(pin,setId,day,score,correct,total,timeSec).run();
-    const logs=detail.map(d=>qlogStmt(env).bind(pin,d.topic||"",d.tier||"Exam-Relevant",d.id,"daily",d.correct?1:0,0));
-    if(logs.length) await env.DB.batch(logs);
-    for(const d of detail){ if(!d.correct&&d.given) await env.DB.prepare("INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,NULL,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1,resolved=0").bind(pin,d.id,d.topic||"",d.tier||"Exam-Relevant").run(); }
+    // read progress first (needed for streak calc), then commit ALL writes in ONE atomic
+    // batch (single round-trip) so a same-second burst of submits stays fast.
     const prog=await env.DB.prepare("SELECT * FROM progress WHERE pin=?").bind(pin).first();
     const xpGain=correct*20+(correct>=8?60:0); let streak=1,best=1,xp=xpGain;
     if(prog){const cont=isYesterday(prog.last_day,day);streak=prog.last_day===day?prog.current_streak:(cont?prog.current_streak+1:1);best=Math.max(prog.best_streak,streak);xp=prog.xp+(prog.last_day===day?0:xpGain);}
-    await env.DB.prepare("INSERT INTO progress (pin,xp,current_streak,best_streak,last_day) VALUES (?,?,?,?,?) ON CONFLICT(pin) DO UPDATE SET xp=?,current_streak=?,best_streak=?,last_day=?").bind(pin,xp,streak,best,day,xp,streak,best,day).run();
-    var outStreak=streak, outXp=xp;
+    const writes=[
+      env.DB.prepare("INSERT INTO attempts (pin,set_id,day,score,correct,total,time_sec) VALUES (?,?,?,?,?,?,?) ON CONFLICT(pin,set_id) DO NOTHING").bind(pin,setId,day,score,correct,total,timeSec),
+      ...detail.map(d=>qlogStmt(env).bind(pin,d.topic||"",d.tier||"Exam-Relevant",d.id,"daily",d.correct?1:0,0)),
+      ...detail.filter(d=>!d.correct&&d.given).map(d=>env.DB.prepare("INSERT INTO wrongs (pin,qkey,topic,tier,gen_id,misses,resolved) VALUES (?,?,?,?,NULL,1,0) ON CONFLICT(pin,qkey) DO UPDATE SET misses=misses+1,resolved=0").bind(pin,d.id,d.topic||"",d.tier||"Exam-Relevant")),
+      env.DB.prepare("INSERT INTO progress (pin,xp,current_streak,best_streak,last_day) VALUES (?,?,?,?,?) ON CONFLICT(pin) DO UPDATE SET xp=?,current_streak=?,best_streak=?,last_day=?").bind(pin,xp,streak,best,day,xp,streak,best,day)
+    ];
+    await env.DB.batch(writes);
+    outStreak=streak;
   } else { score=prior.score; correct=prior.correct; }
-  const better=await env.DB.prepare("SELECT COUNT(*) n FROM attempts WHERE set_id=? AND (score>? OR (score=? AND time_sec<?))").bind(setId,score,score,timeSec).first();
-  const of=await env.DB.prepare("SELECT COUNT(*) n FROM attempts WHERE set_id=?").bind(setId).first();
-  return json({ok:true,already:!!prior,score,correct,total,rank:(better.n||0)+1,of:of.n,streak:typeof outStreak!=="undefined"?outStreak:null,detail});
+  // rank + field size in one query instead of two
+  const rk=await env.DB.prepare("SELECT SUM(CASE WHEN score>? OR (score=? AND time_sec<?) THEN 1 ELSE 0 END) better, COUNT(*) cnt FROM attempts WHERE set_id=?").bind(score,score,timeSec,setId).first();
+  return json({ok:true,already:!!prior,score,correct,total,rank:((rk.better||0)+1),of:rk.cnt,streak:outStreak,detail});
 }
 
 async function submit(req, env) {
