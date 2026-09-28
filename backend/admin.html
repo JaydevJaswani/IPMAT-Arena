@@ -1,57 +1,237 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IPMAT Arena — Roster Upload</title>
+<title>IPMAT Arena — Mentor Console</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-:root{--ink:#1a1526;--bg:#fff;--line:#e7e1ef;--muted:#6b6280;--primary:#ff5a3c;--good:#10b981;--bad:#ef4444}
-*{box-sizing:border-box}body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#faf7ff;color:var(--ink);line-height:1.5}
-.wrap{max-width:620px;margin:0 auto;padding:28px 18px}
-h1{font-size:24px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 22px}
-.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
-label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:6px}
-input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;font-size:15px;margin-bottom:14px}
-.drop{border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);cursor:pointer}
-.drop.on{border-color:var(--primary);background:#fff5f2}
-.row{display:flex;gap:8px;align-items:center;margin:10px 0}
-button{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:13px 18px;font-weight:700;font-size:15px;cursor:pointer;width:100%}
+:root{--ink:#1a1526;--bg:#faf7ff;--card:#fff;--line:#e7e1ef;--muted:#6b6280;--faint:#a49db8;--primary:#ff4d2e;--blue:#3b6dff;--green:#10b981;--amber:#ff9f1c;--bad:#ef4444}
+*{box-sizing:border-box}body{margin:0;font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 16px 70px}
+h1{font-size:23px;margin:0 0 2px}.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:6px}
+input[type=text],input[type=password]{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px;background:#fff}
+.two{display:flex;gap:12px;flex-wrap:wrap}.two>div{flex:1;min-width:200px}
+button{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-weight:700;font-size:15px;cursor:pointer}
 button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
 button:disabled{opacity:.5;cursor:not-allowed}
-.stat{font-size:34px;font-weight:800}.ok{color:var(--good)}.err{color:var(--bad)}
-pre{background:#f6f2fb;border-radius:9px;padding:12px;font-size:12px;overflow:auto;max-height:200px}
-.mini{font-size:13px;color:var(--muted)}
+.ok{color:var(--green)}.err{color:var(--bad)}.mini{font-size:12.5px;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 18px}
+.tabs button{background:#fff;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:9px 16px;font-size:14px}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.kpi .v{font-size:28px;font-weight:800;line-height:1.1}.kpi .l{font-size:12px;color:var(--muted);margin-top:3px}
+.kpi .s{font-size:11.5px;color:var(--faint);margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;cursor:pointer;user-select:none}
+td.num,th.num{text-align:right}
+tr.clk{cursor:pointer}tr.clk:hover{background:#faf7ff}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.tag.g{background:color-mix(in srgb,var(--green) 14%,#fff);color:#0a7a56}
+.tag.a{background:color-mix(in srgb,var(--amber) 18%,#fff);color:#9a6100}
+.tag.r{background:color-mix(in srgb,var(--bad) 12%,#fff);color:#b42318}
+.tag.b{background:color-mix(in srgb,var(--blue) 12%,#fff);color:#2a4fd6}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.wchip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px}
+.wchip b{color:var(--bad)}
+.acc{font-weight:700}.acc.hi{color:var(--green)}.acc.mid{color:var(--amber)}.acc.lo{color:var(--bad)}
+.link{color:var(--primary);cursor:pointer;font-weight:700}
+.back{color:var(--muted);cursor:pointer;font-size:14px;font-weight:700}
+.scroll{overflow-x:auto}
+.empty{color:var(--muted);text-align:center;padding:34px}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:sp 1s linear infinite;margin:26px auto}@keyframes sp{to{transform:rotate(360deg)}}
+.modal{position:fixed;inset:0;background:rgba(20,15,30,.5);display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto;z-index:50}
+.modal .box{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:20px}
+.hbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.x{cursor:pointer;color:var(--muted);font-size:22px;line-height:1;border:0;background:none;padding:0}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.on{border-color:var(--primary);background:#fff5f2}
+.q{border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin:8px 0;font-size:13.5px}
+.q .n{font-weight:800;color:var(--primary)}.q .o{color:var(--muted);font-size:12.5px}.q .a{color:var(--green);font-weight:700;font-size:12.5px;margin-top:4px}
+.q.warn{border-color:var(--amber);background:#fff9f0}.q.warn .a{color:var(--amber)}
+.iss{border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:10px;padding:11px 13px;margin-bottom:9px}
+.iss .m{font-size:11.5px;color:var(--muted);font-family:ui-monospace,monospace;margin-bottom:4px}
+.iss .n{color:var(--bad);font-size:13px;margin-top:4px}
+.stat{font-size:30px;font-weight:800}
+details summary{cursor:pointer;font-weight:700;color:var(--muted);font-size:13px}
+pre{white-space:pre-wrap;font-size:12px;background:#f6f2fb;border-radius:8px;padding:10px;max-height:200px;overflow:auto}
+h2{font-size:17px;margin:18px 0 10px}
+.row{display:flex;gap:8px;align-items:center;margin:10px 0}
 </style></head><body><div class="wrap">
-<h1>🔥 IPMAT Arena · Roster Upload</h1>
-<p class="sub">Upload the latest masterdata whenever new students enrol. Cleans in your browser, then replaces who can log in.</p>
+<h1>🔥 IPMAT Arena · Mentor Console</h1>
+<p class="sub">Engagement, accuracy and integrity across your batches — plus roster & test tools. One login.</p>
 
-<div class="card">
-  <label>Worker URL</label><input id="api" type="text" placeholder="https://ipmat-arena.xxx.workers.dev">
-  <label>Admin key</label><input id="key" type="password" placeholder="ADMIN_KEY">
-  <div class="row"><input id="mgmt" type="checkbox" style="width:auto"><span class="mini">Roster = A-series + Zebar (566). Tick only if <b>26/27-MGMT + E-batches</b> should also log in.</span></div>
+<div class="card" id="auth">
+  <div class="two">
+    <div><label>Worker URL</label><input id="api" type="text" placeholder="https://ipmat-arena.xxx.workers.dev"></div>
+    <div><label>Admin key</label><input id="key" type="password" placeholder="ADMIN_KEY" autocomplete="current-password"></div>
+  </div>
+  <div class="row"><button id="connect">Connect</button><span id="authMsg" class="mini"></span></div>
 </div>
 
-<div class="card">
-  <div id="drop" class="drop">📄 Drop the masterdata .xlsx here, or click to choose</div>
-  <input id="file" type="file" accept=".xlsx,.xls" hidden>
-  <div id="preview"></div>
+<div id="app" hidden>
+  <div class="tabs">
+    <button data-t="dash" class="on">📊 Dashboard</button>
+    <button data-t="flags">⚑ Flags &amp; focus</button>
+    <button data-t="roster">👥 Roster</button>
+    <button data-t="test">📄 Add test</button>
+    <button class="sec" id="logout" style="margin-left:auto">Sign out</button>
+  </div>
+  <div id="tab"></div>
 </div>
 
-<button id="send" disabled>Replace roster on the server</button>
-<div id="result" style="margin-top:14px"></div>
-</div>
 <script>
 const $=s=>document.querySelector(s);
-let clean=[];
+const DEFAULT_API="https://ipmat-arena.jaydev-jaswani.workers.dev";
+let A={api:"",key:""};
+try{A=JSON.parse(sessionStorage.getItem("ims_admin")||"{}");}catch(e){}
+$("#api").value=A.api||DEFAULT_API; $("#key").value=A.key||"";
+const H=()=>({"X-Admin-Key":A.key});
+const localDay=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function accClass(a){return a==null?"":a>=70?"hi":a>=50?"mid":"lo";}
+function accCell(a){return a==null?'<span class="mini">—</span>':`<span class="acc ${accClass(a)}">${a}%</span>`;}
+
+$("#connect").onclick=async()=>{
+  const api=$("#api").value.trim().replace(/\/$/,""),key=$("#key").value.trim();
+  if(!api||!key){$("#authMsg").innerHTML='<span class="err">Enter Worker URL + admin key.</span>';return;}
+  $("#authMsg").textContent="Checking…";
+  try{const r=await fetch(api+"/admin/roster-count",{headers:{"X-Admin-Key":key}});const j=await r.json();
+    if(!j.ok){$("#authMsg").innerHTML='<span class="err">✗ '+(j.error||"rejected")+'</span>';return;}
+    A={api,key};sessionStorage.setItem("ims_admin",JSON.stringify(A));
+    $("#auth").hidden=true;$("#app").hidden=false;$("#authMsg").textContent="";
+    openTab("dash");
+  }catch(e){$("#authMsg").innerHTML='<span class="err">✗ '+e.message+'</span>';}
+};
+$("#logout").onclick=()=>{sessionStorage.removeItem("ims_admin");location.reload();};
+document.querySelectorAll(".tabs button[data-t]").forEach(b=>b.onclick=()=>openTab(b.dataset.t));
+function openTab(t){document.querySelectorAll(".tabs button[data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+  if(t==="dash")renderDash();else if(t==="flags")renderFlags();else if(t==="roster")renderRoster();else if(t==="test")renderTestTab();}
+
+/* auto-connect if creds already stored */
+if(A.api&&A.key){$("#connect").click();}
+
+/* ---------------- DASHBOARD ---------------- */
+let OV=null,sortKey="players",sortDir=-1;
+async function renderDash(){const t=$("#tab");t.innerHTML='<div class="spin"></div>';
+  try{const r=await fetch(A.api+"/admin/overview?day="+localDay(),{headers:H()});OV=await r.json();}catch(e){t.innerHTML='<div class="empty">'+e.message+'</div>';return;}
+  if(!OV.ok){t.innerHTML='<div class="empty">'+(OV.error||"failed")+'</div>';return;}
+  const k=OV.kpi;
+  const kpis=[
+    ["Students",k.students,"on the roster"],
+    ["Active today",k.activeToday,k.dailyDoneRate+"% did today's Duel"],
+    ["Active this week",k.active7d,"played in last 7 days"],
+    ["Avg streak",k.avgStreak,k.onStreak+" on a live streak · best "+k.bestStreak],
+    ["Overall accuracy",k.accuracy==null?"—":k.accuracy+"%",(k.questionsAnswered||0).toLocaleString()+" questions answered"],
+    ["Levels cleared",k.levelsCleared,"Conquest levels"],
+    ["Open flags",k.openIssues,"question reports"],
+    ["Focus flags",k.flags,"tab-switches logged"]
+  ];
+  let html='<div class="kpis">'+kpis.map(x=>`<div class="kpi"><div class="v">${x[1]}</div><div class="l">${x[0]}</div><div class="s">${x[2]}</div></div>`).join("")+'</div>';
+  html+='<div class="card"><h2 style="margin-top:0">Weakest topics (whole cohort)</h2>'+
+    (OV.weakTopics.length?'<div class="chips">'+OV.weakTopics.map(w=>`<span class="wchip">${esc(w.topic)} · <b>${w.accuracy}%</b> <span class="mini">(${w.n})</span></span>`).join("")+'</div>':'<div class="mini">Not enough attempts yet.</div>')+'</div>';
+  html+='<div class="card"><h2 style="margin-top:0">By batch <span class="mini">· tap a row for students</span></h2><div class="scroll"><table id="btbl"><thead><tr>'+
+    [["batch","Batch",0],["roster","Roster",1],["players","Played",1],["activeToday","Today",1],["active7d","7-day",1],["avgStreak","Avg streak",1],["accuracy","Accuracy",1],["levels","Levels",1],["flags","Flags",1]]
+    .map(c=>`<th class="${c[2]?'num':''}" data-k="${c[0]}">${c[1]}</th>`).join("")+'</tr></thead><tbody></tbody></table></div></div>';
+  t.innerHTML=html;
+  document.querySelectorAll("#btbl th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==="batch")?1:-1;}drawBatches();});
+  drawBatches();
+}
+function drawBatches(){
+  const rows=[...OV.batches].sort((a,b)=>{let x=a[sortKey],y=b[sortKey];if(typeof x==="string")return sortDir*x.localeCompare(y);return sortDir*(((x==null?-1:x))-((y==null?-1:y)));});
+  $("#btbl tbody").innerHTML=rows.map(b=>`<tr class="clk" data-b="${esc(b.batch)}">
+    <td><b>${esc(b.batch)}</b></td><td class="num">${b.roster}</td><td class="num">${b.players}</td>
+    <td class="num">${b.activeToday?`<span class="tag g">${b.activeToday}</span>`:'<span class="mini">0</span>'}</td>
+    <td class="num">${b.active7d}</td><td class="num">${b.avgStreak}</td>
+    <td class="num">${accCell(b.accuracy)}</td><td class="num">${b.levels}</td>
+    <td class="num">${b.flags?`<span class="tag a">${b.flags}</span>`:'<span class="mini">0</span>'}</td></tr>`).join("");
+  document.querySelectorAll("#btbl tbody tr").forEach(tr=>tr.onclick=()=>openBatch(tr.dataset.b));
+}
+async function openBatch(batch){const t=$("#tab");t.innerHTML='<div class="spin"></div>';
+  let j;try{j=await fetch(A.api+"/admin/batch?batch="+encodeURIComponent(batch),{headers:H()}).then(r=>r.json());}catch(e){t.innerHTML='<div class="empty">'+e.message+'</div>';return;}
+  if(!j.ok){t.innerHTML='<div class="empty">'+(j.error||"failed")+'</div>';return;}
+  let html=`<div class="hbar"><span class="back" id="bBack">← All batches</span><b>${esc(batch)} · ${j.students.length} students</b></div>`;
+  html+='<div class="card">'+(j.weakTopics.length?'<div class="mini" style="margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Batch weak spots</div><div class="chips">'+j.weakTopics.map(w=>`<span class="wchip">${esc(w.topic)} · <b>${w.accuracy}%</b></span>`).join("")+'</div>':'<div class="mini">Not enough data for topic breakdown yet.</div>')+'</div>';
+  html+='<div class="card"><div class="scroll"><table><thead><tr><th>Student</th><th class="num">Streak</th><th class="num">Best</th><th>Last</th><th class="num">Duels</th><th class="num">Accuracy</th><th class="num">Levels</th><th class="num">To fix</th><th class="num">Flags</th></tr></thead><tbody>'+
+    j.students.map(s=>`<tr class="clk" data-p="${esc(s.pin)}"><td><b>${esc(s.name||s.pin)}</b><div class="mini">${esc(s.pin)}</div></td>
+      <td class="num">${s.streak?`<span class="tag g">🔥 ${s.streak}</span>`:'<span class="mini">0</span>'}</td>
+      <td class="num">${s.best}</td><td>${s.last_day?esc(s.last_day):'<span class="mini">never</span>'}</td>
+      <td class="num">${s.dailies}</td><td class="num">${accCell(s.accuracy)}</td><td class="num">${s.levels}</td>
+      <td class="num">${s.openWrongs?`<span class="tag a">${s.openWrongs}</span>`:'0'}</td>
+      <td class="num">${s.flags?`<span class="tag r">${s.flags}</span>`:'0'}</td></tr>`).join("")+
+    '</tbody></table></div></div>';
+  t.innerHTML=html;
+  $("#bBack").onclick=renderDash;
+  document.querySelectorAll("#tab tbody tr").forEach(tr=>tr.onclick=()=>openStudent(tr.dataset.p));
+}
+async function openStudent(pin){
+  let j;try{j=await fetch(A.api+"/admin/student?pin="+encodeURIComponent(pin),{headers:H()}).then(r=>r.json());}catch(e){alert(e.message);return;}
+  if(!j.ok){alert(j.error||"failed");return;}
+  const s=j.student;
+  const topics=j.topics.slice().sort((a,b)=>a.accuracy-b.accuracy);
+  const dailyAcc=j.dailies.map(d=>`<span class="wchip" title="${d.day}">${d.correct}/${d.total}</span>`).join("");
+  const box=document.createElement("div");box.className="modal";
+  box.innerHTML=`<div class="box"><div class="hbar"><div><b style="font-size:18px">${esc(s.name||s.pin)}</b> <span class="mini">${esc(s.pin)} · ${esc(s.batch)}</span></div><button class="x">&times;</button></div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi"><div class="v">🔥 ${j.streak}</div><div class="l">Streak</div><div class="s">best ${j.best}</div></div>
+      <div class="kpi"><div class="v">${j.dailies.length}</div><div class="l">Duels</div><div class="s">last ${j.lastDay||"—"}</div></div>
+      <div class="kpi"><div class="v">${j.levels.length}</div><div class="l">Levels</div></div>
+      <div class="kpi"><div class="v">${j.flags}</div><div class="l">Flags</div></div>
+    </div>
+    ${j.dailies.length?`<h2>Recent Daily Duels</h2><div class="chips">${dailyAcc}</div>`:""}
+    ${topics.length?`<h2>Topic accuracy <span class="mini">(weakest first)</span></h2><div class="scroll"><table><thead><tr><th>Topic</th><th class="num">Accuracy</th><th class="num">Qs</th></tr></thead><tbody>${topics.map(t=>`<tr><td>${esc(t.topic)}</td><td class="num">${accCell(t.accuracy)}</td><td class="num">${t.n}</td></tr>`).join("")}</tbody></table></div>`:""}
+    ${j.levels.length?`<h2>Levels cleared</h2><div class="chips">${j.levels.map(l=>`<span class="wchip b">${esc(l.topic)} · ${l.level}</span>`).join("")}</div>`:""}
+    ${j.wrongs.length?`<h2>Still to reconquer <span class="mini">(${j.wrongs.length})</span></h2><div class="chips">${j.wrongs.map(w=>`<span class="wchip">${esc(w.topic||"—")} <span class="mini">×${w.misses}</span></span>`).join("")}</div>`:""}
+    </div>`;
+  document.body.appendChild(box);
+  box.querySelector(".x").onclick=()=>box.remove();
+  box.onclick=e=>{if(e.target===box)box.remove();};
+}
+
+/* ---------------- FLAGS ---------------- */
+async function renderFlags(){const t=$("#tab");t.innerHTML='<div class="spin"></div>';
+  try{const [j,sw]=await Promise.all([
+    fetch(A.api+"/admin/issues",{headers:H()}).then(r=>r.json()),
+    fetch(A.api+"/admin/switches",{headers:H()}).then(r=>r.json()).catch(()=>({ok:false}))]);
+    if(!j.ok){t.innerHTML='<div class="empty">'+(j.error||"failed")+'</div>';return;}
+    let html='<div class="card"><h2 style="margin-top:0">⚑ Question flags <span class="mini">('+j.issues.length+')</span></h2>';
+    html+= j.issues.length? j.issues.map(i=>
+      `<div class="iss"><div class="m">${esc(i.created_at)} · ${esc(i.source||"—")} · ${esc(i.qkey||"")} · ${esc(i.name||i.pin||"")} ${i.batch?"("+esc(i.batch)+")":""}</div><div>${esc((i.stem||"").slice(0,240))}</div>${i.note?`<div class="n">“${esc(i.note)}”</div>`:""}</div>`).join("") : '<div class="empty">🎉 No open question flags.</div>';
+    html+='</div><div class="card"><h2 style="margin-top:0">👁 Focus flags <span class="mini">· left the screen during Daily Duel / Drills</span></h2>';
+    html+= (sw.ok&&sw.switches&&sw.switches.length)? '<div class="scroll"><table><thead><tr><th>Student</th><th>Batch</th><th class="num">Left screen</th><th>Last</th></tr></thead><tbody>'+sw.switches.map(s=>
+      `<tr><td><b>${esc(s.name||s.pin)}</b></td><td>${esc(s.batch||"")}</td><td class="num"><span class="tag r">${s.n}×</span></td><td>${esc(s.last||"")}</td></tr>`).join("")+'</tbody></table></div>' : '<div class="empty">Everyone stayed focused.</div>';
+    html+='</div>';
+    t.innerHTML=html;
+  }catch(e){t.innerHTML='<div class="empty">'+e.message+'</div>';}
+}
+
+/* ---------------- ROSTER ---------------- */
+let rosterClean=[];
 const AHMEDABAD=[/^A-?\d{3,4}$/,/^A27-[A-Z]$/,/^Z\d{3,4}$/,/^S\d{3,4}$/,/^PN\d{3,4}$/,/^ZEBAR$/];
 const MGMT=[/^26\s*MGMT/,/^27\s*MGMT/,/^IPM\s*27/];
 const norm=v=>(v==null?"":String(v).replace(/\s+/g," ").trim().toUpperCase());
+function renderRoster(){const t=$("#tab");
+  t.innerHTML=`<div class="card"><div class="mini" style="margin-bottom:10px">Upload the latest masterdata .xlsx — it cleans in your browser, then <b>replaces</b> who can log in.</div>
+    <div class="row"><input id="mgmt" type="checkbox" style="width:auto"><span class="mini">Also allow <b>26/27-MGMT + E-batches</b> (default roster is A-series + Zebar only).</span></div>
+    <div id="drop" class="drop" style="margin-top:12px">📄 Drop the masterdata .xlsx here, or click to choose</div>
+    <input id="file" type="file" accept=".xlsx,.xls" hidden><div id="preview" style="margin-top:12px"></div></div>
+    <button id="send" disabled>Replace roster on the server</button><div id="result" style="margin-top:14px"></div>`;
+  $("#drop").onclick=()=>$("#file").click();
+  $("#file").onchange=e=>e.target.files[0]&&readRoster(e.target.files[0]);
+  ["dragover","dragenter"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.add("on");}));
+  ["dragleave","drop"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.remove("on");}));
+  $("#drop").addEventListener("drop",e=>e.dataTransfer.files[0]&&readRoster(e.dataTransfer.files[0]));
+  $("#mgmt").onchange=()=>{if($("#file").files[0])readRoster($("#file").files[0]);};
+  $("#send").onclick=sendRoster;
+}
 function keepBatch(b){const x=b.toLowerCase();if(/law|clat|gdpi|ug/.test(x))return false;
   if(AHMEDABAD.some(r=>r.test(b)))return true;
   if($("#mgmt").checked&&MGMT.some(r=>r.test(b)))return true;return false;}
-
-function process(rows){
-  const seen={};clean=[];let active=0,ipm=0,dropped=0,conf=0;
-  rows.forEach(r=>{
-    const g=k=>{for(const key in r)if(key.trim().toLowerCase()===k)return r[key];return undefined;};
+function processRoster(rows){
+  const seen={};rosterClean=[];let active=0,ipm=0,dropped=0,conf=0;
+  rows.forEach(r=>{const g=k=>{for(const key in r)if(key.trim().toLowerCase()===k)return r[key];return undefined;};
     const status=String(g('status')||'').trim().toLowerCase();
     const variant=String(g('variant')||'').toLowerCase();
     const pin=String(g('ims pin')||'').trim().toUpperCase();
@@ -62,28 +242,79 @@ function process(rows){
     if(pin.length<6||!name||!batch){dropped++;return;}
     if(!keepBatch(batch)){dropped++;return;}
     if(seen[pin]){if(seen[pin].toLowerCase()!==name.toLowerCase())conf++;return;}
-    seen[pin]=name;clean.push({pin,name,batch});
-  });
-  const byBatch={};clean.forEach(s=>byBatch[s.batch]=(byBatch[s.batch]||0)+1);
-  $("#preview").innerHTML=`<div class="stat ok">${clean.length}</div><div class="mini">students will be able to log in · ${Object.keys(byBatch).length} batches · ${active} active scanned · ${dropped} dropped · ${conf} PIN conflict(s)</div>`;
-  $("#send").disabled=clean.length===0;
+    seen[pin]=name;rosterClean.push({pin,name,batch});});
+  const byBatch={};rosterClean.forEach(s=>byBatch[s.batch]=(byBatch[s.batch]||0)+1);
+  $("#preview").innerHTML=`<div class="stat ok">${rosterClean.length}</div><div class="mini">students will be able to log in · ${Object.keys(byBatch).length} batches · ${active} active scanned · ${dropped} dropped · ${conf} PIN conflict(s)</div>`;
+  $("#send").disabled=rosterClean.length===0;
 }
-function readFile(f){const rd=new FileReader();rd.onload=e=>{const wb=XLSX.read(e.target.result,{type:'array'});
-  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});process(rows);};rd.readAsArrayBuffer(f);}
-$("#drop").onclick=()=>$("#file").click();
-$("#file").onchange=e=>e.target.files[0]&&readFile(e.target.files[0]);
-["dragover","dragenter"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.add("on");}));
-["dragleave","drop"].forEach(ev=>$("#drop").addEventListener(ev,e=>{e.preventDefault();$("#drop").classList.remove("on");}));
-$("#drop").addEventListener("drop",e=>e.dataTransfer.files[0]&&readFile(e.dataTransfer.files[0]));
-$("#mgmt").onchange=()=>{if($("#file").files[0])readFile($("#file").files[0]);};
-$("#send").onclick=async()=>{
-  const api=$("#api").value.trim().replace(/\/$/,''),key=$("#key").value.trim();
-  if(!api||!key){$("#result").innerHTML='<span class="err">Enter Worker URL + admin key.</span>';return;}
-  $("#send").disabled=true;$("#result").textContent="Uploading…";
-  try{const r=await fetch(api+"/admin/upload-roster",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Key":key},body:JSON.stringify({students:clean})});
+function readRoster(f){const rd=new FileReader();rd.onload=e=>{const wb=XLSX.read(e.target.result,{type:'array'});
+  processRoster(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}));};rd.readAsArrayBuffer(f);}
+async function sendRoster(){$("#send").disabled=true;$("#result").textContent="Uploading…";
+  try{const r=await fetch(A.api+"/admin/upload-roster",{method:"POST",headers:{"Content-Type":"application/json",...H()},body:JSON.stringify({students:rosterClean})});
     const j=await r.json();
     $("#result").innerHTML=j.ok?`<span class="ok">✓ Roster replaced — ${j.inserted} students can now log in.</span>`:`<span class="err">✗ ${j.error||'failed'}</span>`;
   }catch(e){$("#result").innerHTML='<span class="err">✗ '+e.message+'</span>';}
-  $("#send").disabled=false;
-};
+  $("#send").disabled=false;}
+
+/* ---------------- ADD TEST ---------------- */
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+let parsedQs=[];
+function renderTestTab(){const t=$("#tab");
+  t.innerHTML=`<div class="card"><div class="two"><div><label>Test name</label><input id="tname" type="text" placeholder="e.g. Number System — Sprint 3"></div>
+    <div><label>Topic</label><input id="ttopic" type="text" placeholder="e.g. Number System"></div></div></div>
+    <div class="card"><div id="tdrop" class="drop">📄 Drop the question PDF here, or click to choose</div>
+    <input id="tfile" type="file" accept=".pdf" hidden>
+    <details style="margin-top:12px"><summary>Expected format (tolerant)</summary>
+    <pre>Q1. A number written twice (e.g. 4747) — largest divisor?
+(A) 99  (B) 101  (C) 1001  (D) 11
+Ans: B
+Sol: abab = ab×101, so 101 always divides it.</pre>
+    <div class="mini">• Questions start with <b>Q1.</b> or <b>1.</b> • Options <b>(A) …</b> • <b>Ans:</b> a letter or number • <b>Sol:</b> optional.</div></details>
+    <div id="tprevWrap" hidden style="margin-top:12px"><div id="tsummary"></div><div id="tpreview" style="margin-top:8px"></div></div></div>
+    <button id="tsend" disabled>Publish test</button><div id="tresult" style="margin-top:14px"></div>`;
+  $("#tdrop").onclick=()=>$("#tfile").click();
+  $("#tfile").onchange=e=>e.target.files[0]&&readTest(e.target.files[0]);
+  ["dragover","dragenter"].forEach(ev=>$("#tdrop").addEventListener(ev,e=>{e.preventDefault();$("#tdrop").classList.add("on");}));
+  ["dragleave","drop"].forEach(ev=>$("#tdrop").addEventListener(ev,e=>{e.preventDefault();$("#tdrop").classList.remove("on");}));
+  $("#tdrop").addEventListener("drop",e=>e.dataTransfer.files[0]&&readTest(e.dataTransfer.files[0]));
+  $("#tsend").onclick=sendTest;
+}
+async function pdfToText(buf){const pdf=await pdfjsLib.getDocument({data:buf}).promise;let out="";
+  for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();let last=null,line="";
+    tc.items.forEach(it=>{const y=it.transform[5];if(last!==null&&Math.abs(y-last)>3){out+=line.trim()+"\n";line="";}line+=it.str+" ";last=y;});
+    out+=line.trim()+"\n\n";}return out;}
+function parseTest(text){
+  const blocks=text.split(/\n(?=\s*(?:Q\s*\d+[.).]|\d+[.)])\s)/i).map(b=>b.trim()).filter(Boolean);const qs=[];
+  blocks.forEach(b=>{if(!/^\s*(Q\s*\d+|\d+)[.)]/i.test(b))return;
+    const lines=b.split(/\n/).map(l=>l.trim()).filter(Boolean);
+    let stem=[],options=[],ans=null,sol=[],inSol=false;
+    lines.forEach(l=>{let m;
+      if(m=l.match(/^(?:Ans(?:wer)?)\s*[:.\-]\s*(.+)/i)){ans=m[1].trim();inSol=false;return;}
+      if(m=l.match(/^(?:Sol(?:ution)?)\s*[:.\-]\s*(.*)/i)){inSol=true;if(m[1])sol.push(m[1]);return;}
+      if(inSol){sol.push(l);return;}
+      const om=l.match(/^\(?([A-Da-d])[).]\s*(.+)/);
+      if(om&&options.length<4){options.push({k:om[1].toUpperCase(),v:om[2].trim()});return;}
+      stem.push(l.replace(/^\s*(?:Q\s*\d+|\d+)[.)]\s*/i,""));});
+    if(!stem.length)return;
+    let type="int",answer=ans||"",display=ans||"",opts=null,mode="auto";
+    if(options.length>=2){type="mcq";opts=options.map(o=>o.v);
+      if(ans&&/^[A-Da-d]$/.test(ans.trim())){const hit=options.find(o=>o.k===ans.trim().toUpperCase());if(hit){answer=hit.v;display=hit.v;}}}
+    else if(ans&&!/^-?\d+(\.\d+)?$/.test(ans.replace(/\s/g,''))){type="short";}
+    if(!ans)mode="open";
+    qs.push({stem:stem.join(" "),type,mode,options:opts,answer,answer_display:display,solution:sol.join(" "),tier:"Exam-Relevant"});});
+  return qs;}
+function renderTestPreview(){const good=parsedQs.filter(q=>q.mode==="auto").length;
+  $("#tprevWrap").hidden=false;
+  $("#tsummary").innerHTML=`<span class="stat ok">${parsedQs.length}</span> <span class="mini">questions parsed · ${good} auto-gradeable · ${parsedQs.length-good} need an answer (flagged)</span>`;
+  $("#tpreview").innerHTML=parsedQs.slice(0,8).map((q,i)=>`<div class="q ${q.mode==='open'?'warn':''}"><span class="n">Q${i+1}.</span> ${esc(q.stem.slice(0,150))}${q.options?`<div class="o">${q.options.map((o,j)=>String.fromCharCode(65+j)+') '+esc(o)).join(' &nbsp; ')}</div>`:''}<div class="a">${q.answer?('Ans: '+esc(q.answer_display)):'⚠ no answer found'}</div></div>`).join("")+(parsedQs.length>8?`<div class="mini">…and ${parsedQs.length-8} more</div>`:"");
+  $("#tsend").disabled=parsedQs.length===0;}
+function readTest(f){const rd=new FileReader();rd.onload=async e=>{try{const txt=await pdfToText(new Uint8Array(e.target.result));parsedQs=parseTest(txt);renderTestPreview();}catch(err){$("#tresult").innerHTML='<span class="err">✗ Could not read PDF: '+err.message+'</span>';}};rd.readAsArrayBuffer(f);}
+async function sendTest(){const name=$("#tname").value.trim(),topic=$("#ttopic").value.trim();
+  if(!name){$("#tresult").innerHTML='<span class="err">Give the test a name.</span>';return;}
+  $("#tsend").disabled=true;$("#tresult").textContent="Publishing…";
+  try{const r=await fetch(A.api+"/admin/upload-test",{method:"POST",headers:{"Content-Type":"application/json",...H()},body:JSON.stringify({name,topic,questions:parsedQs})});
+    const j=await r.json();
+    $("#tresult").innerHTML=j.ok?`<span class="ok">✓ Published "${esc(name)}" — ${j.inserted} questions live (id: ${esc(j.testId)}).</span>`:`<span class="err">✗ ${j.error||'failed'}</span>`;
+  }catch(e){$("#tresult").innerHTML='<span class="err">✗ '+e.message+'</span>';}
+  $("#tsend").disabled=false;}
 </script></body></html>

@@ -53,6 +53,9 @@ export default {
       if (p === "/switch")               return logSwitch(req, env);
       if (p === "/admin/issues")         return adminIssues(req, env);
       if (p === "/admin/switches")       return adminSwitches(req, env);
+      if (p === "/admin/overview")       return adminOverview(req, env, url);
+      if (p === "/admin/batch")          return adminBatch(req, env, url);
+      if (p === "/admin/student")        return adminStudent(req, env, url);
       if (p === "/admin/upload-roster")  return uploadRoster(req, env);
       if (p === "/admin/upload-test")    return uploadTest(req, env);
       if (p === "/admin/roster-count")   return rosterCount(req, env);
@@ -413,7 +416,9 @@ async function report(req, env) {
 async function adminIssues(req, env) {
   if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
   const r = await env.DB.prepare(
-    "SELECT id,pin,qkey,source,stem,note,created_at FROM issues WHERE resolved=0 ORDER BY id DESC LIMIT 200").all();
+    `SELECT i.id,i.pin,st.name,st.batch,i.qkey,i.source,i.stem,i.note,i.created_at
+     FROM issues i LEFT JOIN students st ON st.pin=i.pin
+     WHERE i.resolved=0 ORDER BY i.id DESC LIMIT 200`).all();
   return json({ ok: true, issues: r.results });
 }
 async function logSwitch(req, env) {
@@ -429,6 +434,104 @@ async function adminSwitches(req, env) {
      FROM switches s LEFT JOIN students st ON st.pin=s.pin
      GROUP BY s.pin ORDER BY n DESC LIMIT 200`).all();
   return json({ ok: true, switches: r.results });
+}
+
+// ---- mentor dashboard ----
+// Per-batch engagement + accuracy + integrity, merged from a few grouped queries.
+async function adminOverview(req, env, url) {
+  if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
+  const day = (url.searchParams.get("day") || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const rows = {}; // batch -> metrics
+  const get = b => (rows[b] || (rows[b] = { batch: b, roster: 0, players: 0, activeToday: 0, active7d: 0, avgStreak: 0, maxStreak: 0, onStreak: 0, qCorrect: 0, qTotal: 0, levels: 0, flags: 0 }));
+  const q = async (sql, ...bind) => (await env.DB.prepare(sql).bind(...bind).all()).results || [];
+
+  (await q("SELECT batch, COUNT(*) n FROM students GROUP BY batch")).forEach(r => { get(r.batch).roster = r.n; });
+  (await q(`SELECT st.batch b, COUNT(DISTINCT a.pin) players,
+      COUNT(DISTINCT CASE WHEN a.day=? THEN a.pin END) at,
+      COUNT(DISTINCT CASE WHEN a.day>=date(?, '-6 days') THEN a.pin END) a7
+      FROM attempts a JOIN students st ON st.pin=a.pin WHERE a.set_id LIKE 'daily-%' GROUP BY st.batch`, day, day))
+    .forEach(r => { const x = get(r.b); x.players = r.players; x.activeToday = r.at; x.active7d = r.a7; });
+  (await q(`SELECT st.batch b, AVG(p.current_streak) avg, MAX(p.current_streak) mx, SUM(CASE WHEN p.current_streak>0 THEN 1 ELSE 0 END) on
+      FROM progress p JOIN students st ON st.pin=p.pin GROUP BY st.batch`))
+    .forEach(r => { const x = get(r.b); x.avgStreak = Math.round((r.avg || 0) * 10) / 10; x.maxStreak = r.mx || 0; x.onStreak = r.on || 0; });
+  (await q(`SELECT st.batch b, SUM(ql.correct) c, COUNT(*) n FROM q_log ql JOIN students st ON st.pin=ql.pin GROUP BY st.batch`))
+    .forEach(r => { const x = get(r.b); x.qCorrect = r.c || 0; x.qTotal = r.n || 0; });
+  (await q(`SELECT st.batch b, COUNT(*) n FROM lattempts l JOIN students st ON st.pin=l.pin GROUP BY st.batch`))
+    .forEach(r => { get(r.b).levels = r.n || 0; });
+  (await q(`SELECT st.batch b, COUNT(*) n FROM switches s JOIN students st ON st.pin=s.pin GROUP BY st.batch`))
+    .forEach(r => { get(r.b).flags = r.n || 0; });
+
+  const batches = Object.values(rows).map(b => ({ ...b, accuracy: b.qTotal ? Math.round(100 * b.qCorrect / b.qTotal) : null }))
+    .sort((a, b) => b.players - a.players || b.roster - a.roster);
+  const g = batches.reduce((s, b) => ({
+    students: s.students + b.roster, players: s.players + b.players,
+    activeToday: s.activeToday + b.activeToday, active7d: s.active7d + b.active7d,
+    qCorrect: s.qCorrect + b.qCorrect, qTotal: s.qTotal + b.qTotal, levels: s.levels + b.levels, flags: s.flags + b.flags
+  }), { students: 0, players: 0, activeToday: 0, active7d: 0, qCorrect: 0, qTotal: 0, levels: 0, flags: 0 });
+  const sr = await env.DB.prepare("SELECT AVG(current_streak) avg, MAX(best_streak) best, SUM(CASE WHEN current_streak>0 THEN 1 ELSE 0 END) on FROM progress").first();
+  const iss = await env.DB.prepare("SELECT COUNT(*) n FROM issues WHERE resolved=0").first();
+  const weak = await q(`SELECT topic, SUM(correct) c, COUNT(*) n FROM q_log GROUP BY topic HAVING n>=15 ORDER BY 1.0*SUM(correct)/COUNT(*) ASC LIMIT 8`);
+  return json({
+    ok: true, day,
+    kpi: {
+      students: g.students, playedEver: g.players, activeToday: g.activeToday, active7d: g.active7d,
+      dailyDoneRate: g.students ? Math.round(100 * g.activeToday / g.students) : 0,
+      avgStreak: Math.round((sr && sr.avg || 0) * 10) / 10, bestStreak: (sr && sr.best) || 0, onStreak: (sr && sr.on) || 0,
+      accuracy: g.qTotal ? Math.round(100 * g.qCorrect / g.qTotal) : null, questionsAnswered: g.qTotal,
+      levelsCleared: g.levels, flags: g.flags, openIssues: (iss && iss.n) || 0
+    },
+    batches,
+    weakTopics: weak.map(w => ({ topic: w.topic, accuracy: Math.round(100 * w.c / w.n), n: w.n }))
+  });
+}
+// One batch → per-student rows + that batch's weakest topics.
+async function adminBatch(req, env, url) {
+  if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
+  const batch = url.searchParams.get("batch") || "";
+  if (!batch) return json({ ok: false, error: "batch required" }, 400);
+  const students = (await env.DB.prepare(
+    `SELECT st.pin, st.name,
+       COALESCE(p.current_streak,0) streak, COALESCE(p.best_streak,0) best, p.last_day,
+       (SELECT COUNT(*) FROM attempts a WHERE a.pin=st.pin AND a.set_id LIKE 'daily-%') dailies,
+       (SELECT COUNT(*) FROM q_log q WHERE q.pin=st.pin) qTotal,
+       (SELECT COALESCE(SUM(correct),0) FROM q_log q WHERE q.pin=st.pin) qCorrect,
+       (SELECT COUNT(*) FROM lattempts l WHERE l.pin=st.pin) levels,
+       (SELECT COUNT(*) FROM wrongs w WHERE w.pin=st.pin AND w.resolved=0) openWrongs,
+       (SELECT COUNT(*) FROM switches s WHERE s.pin=st.pin) flags
+     FROM students st WHERE st.batch=? ORDER BY streak DESC, qCorrect DESC`).bind(batch).all()).results || [];
+  const weak = (await env.DB.prepare(
+    `SELECT ql.topic, SUM(ql.correct) c, COUNT(*) n FROM q_log ql JOIN students st ON st.pin=ql.pin
+     WHERE st.batch=? GROUP BY ql.topic HAVING n>=8 ORDER BY 1.0*SUM(ql.correct)/COUNT(*) ASC LIMIT 8`).bind(batch).all()).results || [];
+  return json({
+    ok: true, batch,
+    students: students.map(s => ({ ...s, accuracy: s.qTotal ? Math.round(100 * s.qCorrect / s.qTotal) : null,
+      active: !!(s.last_day) })),
+    weakTopics: weak.map(w => ({ topic: w.topic, accuracy: Math.round(100 * w.c / w.n), n: w.n }))
+  });
+}
+// One student → profile, per-topic accuracy, level clears, recent dailies, open misses.
+async function adminStudent(req, env, url) {
+  if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
+  const pin = cleanPin(url.searchParams.get("pin") || "");
+  if (!pin) return json({ ok: false, error: "pin required" }, 400);
+  const stu = await env.DB.prepare("SELECT pin,name,batch FROM students WHERE pin=?").bind(pin).first();
+  if (!stu) return json({ ok: false, error: "unknown pin" }, 404);
+  const prog = await env.DB.prepare("SELECT current_streak,best_streak,last_day FROM progress WHERE pin=?").bind(pin).first();
+  const topics = (await env.DB.prepare(
+    "SELECT topic, SUM(correct) c, COUNT(*) n FROM q_log WHERE pin=? GROUP BY topic ORDER BY n DESC").bind(pin).all()).results || [];
+  const levels = (await env.DB.prepare(
+    "SELECT topic, level, correct, total FROM lattempts WHERE pin=? ORDER BY topic, level").bind(pin).all()).results || [];
+  const dailies = (await env.DB.prepare(
+    "SELECT day, score, correct, total FROM attempts WHERE pin=? AND set_id LIKE 'daily-%' ORDER BY day DESC LIMIT 21").bind(pin).all()).results || [];
+  const wrongs = (await env.DB.prepare(
+    "SELECT topic, tier, misses FROM wrongs WHERE pin=? AND resolved=0 ORDER BY misses DESC LIMIT 30").bind(pin).all()).results || [];
+  const flags = await env.DB.prepare("SELECT COUNT(*) n, MAX(created_at) last FROM switches WHERE pin=?").bind(pin).first();
+  return json({
+    ok: true, student: stu,
+    streak: (prog && prog.current_streak) || 0, best: (prog && prog.best_streak) || 0, lastDay: prog && prog.last_day || null,
+    topics: topics.map(t => ({ topic: t.topic, accuracy: t.n ? Math.round(100 * t.c / t.n) : 0, n: t.n })),
+    levels, dailies, wrongs, flags: (flags && flags.n) || 0, flagLast: flags && flags.last || null
+  });
 }
 
 // ---- admin ----
