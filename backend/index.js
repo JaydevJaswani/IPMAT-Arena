@@ -30,35 +30,35 @@ export default {
     const p = url.pathname.replace(/\/+$/, "") || "/";
     try {
       if (p === "/" )                    return json({ ok: true, service: "ipmat-arena" });
-      if (p === "/login")                return login(req, env);
-      if (p === "/me")                   return me(url, env);
-      if (p === "/daily")                return dailyGet(url, env);
-      if (p === "/daily-submit")         return dailySubmit(req, env);
-      if (p === "/submit")               return submit(req, env);
-      if (p === "/leaderboard")          return leaderboard(url, env);
-      if (p === "/tests")                return listTests(env);
-      if (p === "/test")                 return getTest(url, env);
-      if (p === "/grade")                return grade(req, env);
-      if (p === "/test-status")          return testStatus(url, env);
-      if (p === "/review")               return review(url, env);
-      if (p === "/extra")                return extra(url, env);
-      if (p === "/redo")                 return redo(req, env);
-      if (p === "/practice")             return practice(url, env);
-      if (p === "/pgrade")               return pgrade(req, env);
-      if (p === "/plog")                 return plog(req, env);
-      if (p === "/campaign")             return campaign(url, env);
-      if (p === "/level-save")           return levelSave(req, env);
-      if (p === "/level-review")         return levelReview(url, env);
-      if (p === "/report")               return report(req, env);
-      if (p === "/switch")               return logSwitch(req, env);
-      if (p === "/admin/issues")         return adminIssues(req, env);
-      if (p === "/admin/switches")       return adminSwitches(req, env);
-      if (p === "/admin/overview")       return adminOverview(req, env, url);
-      if (p === "/admin/batch")          return adminBatch(req, env, url);
-      if (p === "/admin/student")        return adminStudent(req, env, url);
-      if (p === "/admin/upload-roster")  return uploadRoster(req, env);
-      if (p === "/admin/upload-test")    return uploadTest(req, env);
-      if (p === "/admin/roster-count")   return rosterCount(req, env);
+      if (p === "/login")                return await login(req, env);
+      if (p === "/me")                   return await me(url, env);
+      if (p === "/daily")                return await dailyGet(url, env);
+      if (p === "/daily-submit")         return await dailySubmit(req, env);
+      if (p === "/submit")               return await submit(req, env);
+      if (p === "/leaderboard")          return await leaderboard(url, env);
+      if (p === "/tests")                return await listTests(env);
+      if (p === "/test")                 return await getTest(url, env);
+      if (p === "/grade")                return await grade(req, env);
+      if (p === "/test-status")          return await testStatus(url, env);
+      if (p === "/review")               return await review(url, env);
+      if (p === "/extra")                return await extra(url, env);
+      if (p === "/redo")                 return await redo(req, env);
+      if (p === "/practice")             return await practice(url, env);
+      if (p === "/pgrade")               return await pgrade(req, env);
+      if (p === "/plog")                 return await plog(req, env);
+      if (p === "/campaign")             return await campaign(url, env);
+      if (p === "/level-save")           return await levelSave(req, env);
+      if (p === "/level-review")         return await levelReview(url, env);
+      if (p === "/report")               return await report(req, env);
+      if (p === "/switch")               return await logSwitch(req, env);
+      if (p === "/admin/issues")         return await adminIssues(req, env);
+      if (p === "/admin/switches")       return await adminSwitches(req, env);
+      if (p === "/admin/overview")       return await adminOverview(req, env, url);
+      if (p === "/admin/batch")          return await adminBatch(req, env, url);
+      if (p === "/admin/student")        return await adminStudent(req, env, url);
+      if (p === "/admin/upload-roster")  return await uploadRoster(req, env);
+      if (p === "/admin/upload-test")    return await uploadTest(req, env);
+      if (p === "/admin/roster-count")   return await rosterCount(req, env);
       return json({ ok: false, error: "not found" }, 404);
     } catch (e) {
       return json({ ok: false, error: String(e && e.message || e) }, 500);
@@ -451,9 +451,9 @@ async function adminOverview(req, env, url) {
       COUNT(DISTINCT CASE WHEN a.day>=date(?, '-6 days') THEN a.pin END) a7
       FROM attempts a JOIN students st ON st.pin=a.pin WHERE a.set_id LIKE 'daily-%' GROUP BY st.batch`, day, day))
     .forEach(r => { const x = get(r.b); x.players = r.players; x.activeToday = r.at; x.active7d = r.a7; });
-  (await q(`SELECT st.batch b, AVG(p.current_streak) avg, MAX(p.current_streak) mx, SUM(CASE WHEN p.current_streak>0 THEN 1 ELSE 0 END) on
+  (await q(`SELECT st.batch b, AVG(p.current_streak) avg, MAX(p.current_streak) mx, SUM(CASE WHEN p.current_streak>0 THEN 1 ELSE 0 END) onstreak
       FROM progress p JOIN students st ON st.pin=p.pin GROUP BY st.batch`))
-    .forEach(r => { const x = get(r.b); x.avgStreak = Math.round((r.avg || 0) * 10) / 10; x.maxStreak = r.mx || 0; x.onStreak = r.on || 0; });
+    .forEach(r => { const x = get(r.b); x.avgStreak = Math.round((r.avg || 0) * 10) / 10; x.maxStreak = r.mx || 0; x.onStreak = r.onstreak || 0; });
   (await q(`SELECT st.batch b, SUM(ql.correct) c, COUNT(*) n FROM q_log ql JOIN students st ON st.pin=ql.pin GROUP BY st.batch`))
     .forEach(r => { const x = get(r.b); x.qCorrect = r.c || 0; x.qTotal = r.n || 0; });
   (await q(`SELECT st.batch b, COUNT(*) n FROM lattempts l JOIN students st ON st.pin=l.pin GROUP BY st.batch`))
@@ -468,7 +468,7 @@ async function adminOverview(req, env, url) {
     activeToday: s.activeToday + b.activeToday, active7d: s.active7d + b.active7d,
     qCorrect: s.qCorrect + b.qCorrect, qTotal: s.qTotal + b.qTotal, levels: s.levels + b.levels, flags: s.flags + b.flags
   }), { students: 0, players: 0, activeToday: 0, active7d: 0, qCorrect: 0, qTotal: 0, levels: 0, flags: 0 });
-  const sr = await env.DB.prepare("SELECT AVG(current_streak) avg, MAX(best_streak) best, SUM(CASE WHEN current_streak>0 THEN 1 ELSE 0 END) on FROM progress").first();
+  const sr = await env.DB.prepare("SELECT AVG(current_streak) avg, MAX(best_streak) best, SUM(CASE WHEN current_streak>0 THEN 1 ELSE 0 END) onstreak FROM progress").first();
   const iss = await env.DB.prepare("SELECT COUNT(*) n FROM issues WHERE resolved=0").first();
   const weak = await q(`SELECT topic, SUM(correct) c, COUNT(*) n FROM q_log GROUP BY topic HAVING n>=15 ORDER BY 1.0*SUM(correct)/COUNT(*) ASC LIMIT 8`);
   return json({
@@ -476,7 +476,7 @@ async function adminOverview(req, env, url) {
     kpi: {
       students: g.students, playedEver: g.players, activeToday: g.activeToday, active7d: g.active7d,
       dailyDoneRate: g.students ? Math.round(100 * g.activeToday / g.students) : 0,
-      avgStreak: Math.round((sr && sr.avg || 0) * 10) / 10, bestStreak: (sr && sr.best) || 0, onStreak: (sr && sr.on) || 0,
+      avgStreak: Math.round((sr && sr.avg || 0) * 10) / 10, bestStreak: (sr && sr.best) || 0, onStreak: (sr && sr.onstreak) || 0,
       accuracy: g.qTotal ? Math.round(100 * g.qCorrect / g.qTotal) : null, questionsAnswered: g.qTotal,
       levelsCleared: g.levels, flags: g.flags, openIssues: (iss && iss.n) || 0
     },
@@ -498,7 +498,8 @@ async function adminBatch(req, env, url) {
        (SELECT COUNT(*) FROM lattempts l WHERE l.pin=st.pin) levels,
        (SELECT COUNT(*) FROM wrongs w WHERE w.pin=st.pin AND w.resolved=0) openWrongs,
        (SELECT COUNT(*) FROM switches s WHERE s.pin=st.pin) flags
-     FROM students st WHERE st.batch=? ORDER BY streak DESC, qCorrect DESC`).bind(batch).all()).results || [];
+     FROM students st LEFT JOIN progress p ON p.pin=st.pin
+     WHERE st.batch=? ORDER BY streak DESC, qCorrect DESC`).bind(batch).all()).results || [];
   const weak = (await env.DB.prepare(
     `SELECT ql.topic, SUM(ql.correct) c, COUNT(*) n FROM q_log ql JOIN students st ON st.pin=ql.pin
      WHERE st.batch=? GROUP BY ql.topic HAVING n>=8 ORDER BY 1.0*SUM(ql.correct)/COUNT(*) ASC LIMIT 8`).bind(batch).all()).results || [];

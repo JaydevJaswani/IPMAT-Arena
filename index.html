@@ -419,19 +419,21 @@ function pRender(){
     if(PS.answered){inp.value=PS.sel;}w.appendChild(inp);A.appendChild(w);if(!PS.answered)A.appendChild(numKeypad(inp));}
   if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
   const B=$("#pB");
-  if(!PS.answered){const c=el("button","btn","Check");c.onclick=pCheck;B.appendChild(c);}
+  if(!PS.answered){const c=el("button","btn","Check");c.onclick=()=>{c.disabled=true;pCheck();};B.appendChild(c);}
   else{const done=PS.mastered>=PS.goal,n=el("button","btn",done?"Finish — cleared →":(PS.lastCorrect?"Next →":"Retry this one →"));n.onclick=()=>{PS.i++;pServe();};B.appendChild(n);
     if(!done&&!PS.lastCorrect&&(PS.cur._tries||0)>=3){const sk=el("button","btn ghost sm","⚑ Looks wrong? Flag & skip");sk.onclick=pFlagSkip;B.appendChild(sk);}}
 }
 async function pCheck(){
+  if(PS.answered||PS._checking)return;   // guard against double-click on Check (async grade in flight)
   const q=PS.cur;let given;
   if(q.kind==="mcq"){if(PS.sel==null)return;given=PS.sel;}
   else{const v=($("#pNum").value||"").trim();if(v==="")return;given=v;PS.sel=v;}
+  PS._checking=true;
   let correct=false,correctAns="",sol="";
   if(PS.backing==="gen"){correct=(q.kind==="mcq"?given===q.answer:Number(given)===Number(q.answer));correctAns=q.answer;sol=q.sol;
     api("/plog",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:[{genId:q._gen,topic:PS.topic,tier:PS.tier,correct}]})}).catch(()=>{});}
   else{try{const r=await api("/pgrade",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,topic:PS.topic,level:PS.level,items:[{id:q._static,given}]})});const d=(r.detail&&r.detail[0])||{};correct=!!d.correct;correctAns=d.answer;sol=d.solution;}catch(e){}}
-  PS.answered=true;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;PS.attempts++;
+  PS.answered=true;PS._checking=false;PS.lastCorrect=correct;PS.correctAns=correctAns;PS.lastSol=sol;PS.attempts++;
   if(correct){PS.mastered++;PS.detail.push({stem:q.stem,options:q.kind==="mcq"?q.options:null,given,correct:true,answer:correctAns,solution:sol});}
   else{q._tries=(q._tries||0)+1;PS.queue.push(q);}   // the EXACT same question returns until it's answered right
   pRender();
