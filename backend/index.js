@@ -50,6 +50,8 @@ export default {
       if (p === "/level-save")           return await levelSave(req, env);
       if (p === "/level-review")         return await levelReview(url, env);
       if (p === "/report")               return await report(req, env);
+      if (p === "/bookmark")             return await bookmarkToggle(req, env);
+      if (p === "/bookmarks")            return await bookmarksList(url, env);
       if (p === "/switch")               return await logSwitch(req, env);
       if (p === "/admin/issues")         return await adminIssues(req, env);
       if (p === "/admin/switches")       return await adminSwitches(req, env);
@@ -412,6 +414,32 @@ async function report(req, env) {
     .bind(cleanPin(b.pin), String(b.qkey || "").slice(0, 120), String(b.source || "").slice(0, 40),
       String(b.stem || "").slice(0, 400), String(b.note || "").slice(0, 500)).run();
   return json({ ok: true });
+}
+// Toggle a saved/bookmarked question for a student. { pin, qkey, on }
+async function bookmarkToggle(req, env) {
+  const b = await req.json(), pin = cleanPin(b.pin), qkey = String(b.qkey || "").slice(0, 120);
+  if (!pin || !qkey) return json({ ok: false, error: "pin+qkey required" }, 400);
+  if (b.on === false) {
+    await env.DB.prepare("DELETE FROM bookmarks WHERE pin=? AND qkey=?").bind(pin, qkey).run();
+    return json({ ok: true, on: false });
+  }
+  await env.DB.prepare("INSERT INTO bookmarks (pin,qkey) VALUES (?,?) ON CONFLICT(pin,qkey) DO NOTHING").bind(pin, qkey).run();
+  return json({ ok: true, on: true });
+}
+// List a student's saved questions, joined with the question content (stem/options/answer/solution).
+async function bookmarksList(url, env) {
+  const pin = cleanPin(url.searchParams.get("pin"));
+  if (!pin) return json({ ok: false, error: "pin required" }, 400);
+  const rows = (await env.DB.prepare(
+    `SELECT b.qkey, b.created_at, q.topic, q.tier, q.type, q.stem, q.options, q.answer_display, q.solution
+     FROM bookmarks b LEFT JOIN questions q ON q.id=b.qkey
+     WHERE b.pin=? ORDER BY b.created_at DESC LIMIT 200`).bind(pin).all()).results || [];
+  const items = rows.map(r => ({
+    qkey: r.qkey, topic: r.topic || "", tier: r.tier || "", type: r.type || "",
+    stem: r.stem || "", options: r.options ? JSON.parse(r.options) : null,
+    answer: r.answer_display || "", solution: r.solution || "", created_at: r.created_at
+  }));
+  return json({ ok: true, ids: rows.map(r => r.qkey), items });
 }
 async function adminIssues(req, env) {
   if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);

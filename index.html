@@ -112,6 +112,16 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .node small{position:absolute;bottom:3px;font-size:8px;opacity:.75;font-family:var(--body)}
 .cap{font-size:11.5px;color:var(--faint);margin:2px 4px 10px;display:flex;gap:12px;flex-wrap:wrap}
 #reportFab{position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#fff;border:1.5px solid var(--line);box-shadow:var(--shadow);border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:700;color:var(--muted)}
+#bmFab{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#fff;border:1.5px solid var(--line);box-shadow:var(--shadow);border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer}
+#bmFab.on{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 50%,#fff);background:color-mix(in srgb,var(--amber) 10%,#fff)}
+.svq{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px}
+.svq .qh{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.svq .rm{margin-left:auto;color:var(--faint);cursor:pointer;font-size:13px;font-weight:700}
+.svq .stem{font-size:15px;line-height:1.55}.svq .stem img{max-width:100%;border-radius:12px;margin-top:8px}
+.svq .rev{margin-top:10px}
+.svq .revbtn{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer}
+.svq .ansbox{margin-top:10px}.svq .ansbox .aa{font-weight:800;color:var(--green);margin-bottom:6px}
+.svq .ansbox .ss{color:var(--ink);font-size:13px;white-space:pre-line;font-family:var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;line-height:1.6}
 .modal{position:fixed;inset:0;background:rgba(20,10,40,.4);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal .box{background:#fff;border-radius:16px;padding:20px;max-width:360px;width:100%;box-shadow:0 20px 50px -10px rgba(0,0,0,.4)}
 .modal h3{font-size:18px;margin:0 0 4px}.modal p{color:var(--muted);font-size:13px;margin:0}
@@ -165,6 +175,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
   <section id="extra" hidden></section>
   <section id="conquest" hidden></section>
   <section id="practice" hidden></section>
+  <section id="saved" hidden></section>
   <section id="board" hidden>
     <div class="section-h" style="margin-top:8px"><h2>Leaderboard</h2></div>
     <div class="tabs" id="tabs"><button class="tab on" data-t="daily">Daily Duel</button><button class="tab" data-t="conquest">Conquest Pts</button><button class="tab" data-t="accuracy">Accuracy</button><button class="tab" data-t="streak">Streak</button></div>
@@ -172,6 +183,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
     <p class="foot">IPMAT Arena · IMS Ahmedabad · <i>Trusted for Success</i></p>
   </section>
 </div>
+<button id="bmFab" hidden>☆ Save</button>
 <button id="reportFab" hidden>⚑ Report issue</button>
 <div id="reportModal" class="modal" hidden><div class="box">
   <h3>Report this question</h3><p>Wrong answer, typo, or unclear? Flag it and JJ will check.</p>
@@ -237,17 +249,42 @@ const dName=t=>DNAME[t]||t;
 let CAMPAIGN={done:new Set(),poolCov:new Set()};
 /* report issue */
 let currentQ=null;
-const setReportCtx=(qkey,source,stem)=>{currentQ={qkey,source,stem};};
+let BM=new Set();
+const bmSavable=k=>/^(practice:|daily-bank:)/.test(k||"");   // only real DB questions are reviewable later
+function updateBmFab(qkey){const f=$("#bmFab");if(!f)return;const ok=bmSavable(qkey);f.hidden=!ok;if(ok){const on=BM.has(qkey);f.classList.toggle("on",on);f.innerHTML=on?"★ Saved":"☆ Save";}}
+async function loadBookmarks(){try{const r=await api("/bookmarks?pin="+encodeURIComponent(ME.pin));if(r.ok){BM=new Set(r.ids||[]);const g=$("#savedGo");if(g)g.textContent=BM.size?BM.size+" →":"→";}}catch(e){}}
+const setReportCtx=(qkey,source,stem)=>{currentQ={qkey,source,stem};updateBmFab(qkey);};
+$("#bmFab").onclick=async()=>{const k=currentQ&&currentQ.qkey;if(!bmSavable(k))return;const on=!BM.has(k);
+  if(on)BM.add(k);else BM.delete(k);updateBmFab(k);
+  try{await api("/bookmark",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,qkey:k,on})});}catch(e){}};
 $("#reportFab").onclick=()=>{$("#reportNote").value="";$("#reportModal").hidden=false;};
 $("#reportCancel").onclick=()=>{$("#reportModal").hidden=true;};
 $("#reportSend").onclick=async()=>{const note=$("#reportNote").value;$("#reportModal").hidden=true;
   try{await api("/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME?ME.pin:"",qkey:currentQ?.qkey||"",source:currentQ?.source||"",stem:currentQ?.stem||"",note})});}catch(e){}
   const f=$("#reportFab"),o=f.textContent;f.textContent="✓ Flagged — thanks";setTimeout(()=>{f.textContent=o;},1800);};
 /* nav */
-function show(id){["login","hub","quiz","results","tests","testplay","testresults","extra","conquest","practice","board"].forEach(s=>$("#"+s).hidden=(s!==id));
+function show(id){["login","hub","quiz","results","tests","testplay","testresults","extra","conquest","practice","board","saved"].forEach(s=>$("#"+s).hidden=(s!==id));
   $("#homeBtn").hidden=!(ME&&id!=="hub"&&id!=="login");
   $("#reportFab").hidden=!["quiz","testplay","extra","practice"].includes(id);
+  $("#bmFab").hidden=true;   // re-shown by setReportCtx when the rendered question is savable
   window.scrollTo({top:0,behavior:"instant"});}
+function openSaved(){show("saved");const s=$("#saved");
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>⭐ Saved</h2><span class="link" id="svBack">← Home</span></div><div id="svList"><div class="spin"></div></div>`;
+  $("#svBack").onclick=openHub;
+  api("/bookmarks?pin="+encodeURIComponent(ME.pin)).then(r=>{
+    BM=new Set(r.ids||[]);const L=$("#svList");
+    if(!r.ok||!r.items||!r.items.length){L.innerHTML=`<div class="card"><div class="empty">No saved questions yet.<br>Tap <b>☆ Save</b> on any question in Conquest or the Daily Duel to keep it here for revision.</div></div>`;return;}
+    L.innerHTML="";
+    r.items.forEach(it=>{const card=el("div","svq"),has=it.answer||it.solution;
+      card.innerHTML=`<div class="qh"><span class="chip t">${dName(it.topic)||"Quant"}</span>${it.tier?`<span class="chip ${tierClass(it.tier)}">${it.tier}</span>`:""}<span class="rm">✕ Remove</span></div>
+        <div class="stem">${it.stem||"(question no longer available)"}</div>
+        ${has?`<div class="rev"><button class="revbtn">Show answer &amp; solution</button><div class="ansbox" hidden><div class="aa">Answer: ${it.answer||"—"}</div>${it.solution?`<div class="ss">${it.solution}</div>`:""}</div></div>`:""}`;
+      const rb=card.querySelector(".revbtn");if(rb)rb.onclick=()=>{card.querySelector(".ansbox").hidden=false;rb.style.display="none";};
+      card.querySelector(".rm").onclick=async()=>{BM.delete(it.qkey);card.remove();
+        try{await api("/bookmark",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,qkey:it.qkey,on:false})});}catch(e){}
+        if(!L.children.length)openSaved();};
+      L.appendChild(card);});
+  }).catch(()=>{$("#svList").innerHTML=`<div class="card"><div class="empty">Couldn't load your saved questions.</div></div>`;});}
 $("#homeBtn").onclick=()=>leaveConquestGuard(openHub);
 function leaveConquestGuard(go){
   if($("#practice").hidden||!PS||PS.attempts<1||PS.mastered>=PS.goal){go();return;}
@@ -315,11 +352,13 @@ async function openHub(){
       <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Reconquer</span><span class="ts">Only the questions you got wrong</span></span><span class="go" id="extraGo">→</span></button>
       <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Timed topic tests · unlock by conquering a topic</span></span><span class="go">🔒</span></button>
       <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
+      <button class="tile saved" id="tSaved"><span class="ic">⭐</span><span><span class="tt">Saved</span><span class="ts">Your bookmarked questions to revise</span></span><span class="go" id="savedGo">→</span></button>
     </div>
     <div class="section-h"><h2>Conquest by area</h2><span class="mono" style="font-size:12px;color:var(--faint)">points</span></div>
     <div class="card" id="areaCard"><div class="spin"></div></div>`;
-  $("#tDaily").onclick=startDaily;$("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");
+  $("#tDaily").onclick=startDaily;$("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");$("#tSaved").onclick=openSaved;
   updateStreakPill(0);
+  loadBookmarks();
   try{const m=await api("/me?pin="+encodeURIComponent(ME.pin));if(m.ok){
     $("#hSolved").textContent=m.solved;$("#hAcc").textContent=m.seen?Math.round(m.solved/m.seen*100)+"%":"—";updateStreakPill(m.streak);
     $("#hCP").textContent=m.conquest;$("#hCPsub").textContent=m.solved+" solved of "+m.seen+" seen";
