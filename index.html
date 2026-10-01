@@ -119,7 +119,11 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .svq .rm{margin-left:auto;color:var(--faint);cursor:pointer;font-size:13px;font-weight:700}
 .svq .stem{font-size:15px;line-height:1.55}.svq .stem img{max-width:100%;border-radius:12px;margin-top:8px}
 .svq .rev{margin-top:10px}
-.svq .revbtn{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer}
+.svact{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.svq .revbtn,.svq .svbtn{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer}
+.svq .svbtn.try{color:var(--primary);border-color:color-mix(in srgb,var(--primary) 40%,var(--surface))}
+.svtry{margin-top:12px}.svtry .answers{margin-top:0}
+.svfb{margin-top:10px;font-weight:800;font-size:14px}.svfb.ok{color:var(--green)}.svfb.no{color:var(--bad)}
 .svq .ansbox{margin-top:10px}.svq .ansbox .aa{font-weight:800;color:var(--green);margin-bottom:6px}
 .svq .ansbox .ss{color:var(--ink);font-size:13px;white-space:pre-line;font-family:var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;line-height:1.6}
 .modal{position:fixed;inset:0;background:rgba(20,10,40,.4);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -289,16 +293,42 @@ function openSaved(){show("saved");const s=$("#saved");
     BM=new Set(r.ids||[]);const L=$("#svList");
     if(!r.ok||!r.items||!r.items.length){L.innerHTML=`<div class="card"><div class="empty">No saved questions yet.<br>Tap <b>☆ Save</b> on any question in Conquest or the Daily Duel to keep it here for revision.</div></div>`;return;}
     L.innerHTML="";
-    r.items.forEach(it=>{const card=el("div","svq"),has=it.answer||it.solution;
+    r.items.forEach(it=>{const card=el("div","svq"),has=it.answer||it.solution,canTry=it.stem&&(it.type==="mcq"?(it.options&&it.options.length):it.type==="int");
       card.innerHTML=`<div class="qh"><span class="chip t">${dName(it.topic)||"Quant"}</span>${it.tier?`<span class="chip ${tierClass(it.tier)}">${it.tier}</span>`:""}<span class="rm">✕ Remove</span></div>
         <div class="stem">${it.stem||"(question no longer available)"}</div>
-        ${has?`<div class="rev"><button class="revbtn">Show answer &amp; solution</button><div class="ansbox" hidden><div class="aa">Answer: ${it.answer||"—"}</div>${it.solution?`<div class="ss">${it.solution}</div>`:""}</div></div>`:""}`;
-      const rb=card.querySelector(".revbtn");if(rb)rb.onclick=()=>{card.querySelector(".ansbox").hidden=false;rb.style.display="none";};
+        <div class="svact">${canTry?`<button class="svbtn try">↻ Re-attempt</button>`:""}${has?`<button class="revbtn">Show answer &amp; solution</button>`:""}</div>
+        <div class="svtry" hidden></div>
+        <div class="ansbox" hidden><div class="aa">Answer: ${it.answer||"—"}</div>${it.solution?`<div class="ss">${it.solution}</div>`:""}</div>`;
+      const reveal=()=>{card.querySelector(".ansbox").hidden=false;const rb=card.querySelector(".revbtn");if(rb)rb.style.display="none";};
+      const rb=card.querySelector(".revbtn");if(rb)rb.onclick=reveal;
+      const tb=card.querySelector(".try");if(tb)tb.onclick=()=>buildReattempt(card,it,reveal,tb);
       card.querySelector(".rm").onclick=async()=>{BM.delete(it.qkey);card.remove();
         try{await api("/bookmark",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,qkey:it.qkey,on:false})});}catch(e){}
         if(!L.children.length)openSaved();};
       L.appendChild(card);});
   }).catch(()=>{$("#svList").innerHTML=`<div class="card"><div class="empty">Couldn't load your saved questions.</div></div>`;});}
+function buildReattempt(card,it,reveal,tb){
+  tb.style.display="none";const box=card.querySelector(".svtry");box.hidden=false;box.innerHTML="";let sel=null;
+  if(it.type==="mcq"){const A=el("div","answers");
+    it.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
+      b.onclick=()=>{if(box.dataset.done)return;sel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});
+    box.appendChild(A);
+  }else{const w=el("div","numin"),inp=el("input");inp.type="text";inp.inputMode="none";inp.readOnly=true;inp.placeholder="tap the keypad";
+    w.appendChild(inp);box.appendChild(w);box.appendChild(numKeypad(inp));box._inp=inp;}
+  const fb=el("div");box.appendChild(fb);
+  const chk=el("button","btn sm","Check");chk.style.marginTop="10px";box.appendChild(chk);
+  chk.onclick=async()=>{if(box.dataset.done)return;
+    const given=it.type==="mcq"?sel:((box._inp.value||"").trim());
+    if(given==null||given==="")return;
+    chk.disabled=true;
+    let res;try{res=await api("/grade-q",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({qkey:it.qkey,given})});}catch(e){res=null;}
+    if(!res||!res.ok){fb.innerHTML=`<div class="svfb no">Couldn't check — try again.</div>`;chk.disabled=false;return;}
+    box.dataset.done="1";
+    if(it.type==="mcq")[...box.querySelectorAll(".opt")].forEach(b=>{const txt=b.querySelector("span:last-child").textContent;if(txt===res.answer)b.classList.add("correct");else if(txt===given&&!res.correct)b.classList.add("miss");});
+    fb.innerHTML=`<div class="svfb ${res.correct?'ok':'no'}">${res.correct?"✓ Correct!":"✗ Not quite — correct answer: "+res.answer}</div>`;
+    chk.style.display="none";reveal();
+  };
+}
 $("#homeBtn").onclick=()=>leaveConquestGuard(openHub);
 function leaveConquestGuard(go){
   if($("#practice").hidden||!PS||PS.attempts<1||PS.mastered>=PS.goal){go();return;}
