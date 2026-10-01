@@ -220,6 +220,12 @@ async function leaderboard(url, env) {
   const type = url.searchParams.get("type") || "daily";
   const day = url.searchParams.get("day");
   const pin = cleanPin(url.searchParams.get("pin"));
+  // ---- 60s edge cache: the board scans the whole q_log/attempts tables; without this
+  // every student's board + home-rank view re-scans everything. Cache by type+day. ----
+  const cache = caches.default;
+  const cacheKey = new Request("https://lb.cache/" + type + "?day=" + (day || ""));
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
   let rows = [];
   if (type === "daily") {
     rows = (await env.DB.prepare(
@@ -244,7 +250,10 @@ async function leaderboard(url, env) {
       `SELECT s.batch name, s.batch, ROUND(AVG(a.score),1) score FROM attempts a JOIN students s ON s.pin=a.pin
        GROUP BY s.batch HAVING COUNT(*)>=5 ORDER BY score DESC LIMIT 50`).all()).results;
   }
-  return json({ ok: true, type, rows });
+  const resp = json({ ok: true, type, rows });
+  resp.headers.set("Cache-Control", "max-age=60");
+  await cache.put(cacheKey, resp.clone());
+  return resp;
 }
 
 // ---- tests / static questions ----
@@ -479,6 +488,8 @@ async function adminSwitches(req, env) {
 async function adminOverview(req, env, url) {
   if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
   const day = (url.searchParams.get("day") || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  const _cache = caches.default, _ck = new Request("https://adm.cache/overview?day=" + day);
+  const _hit = await _cache.match(_ck); if (_hit) return _hit;
   const rows = {}; // batch -> metrics
   const get = b => (rows[b] || (rows[b] = { batch: b, roster: 0, players: 0, activeToday: 0, active7d: 0, avgStreak: 0, maxStreak: 0, onStreak: 0, qCorrect: 0, qTotal: 0, levels: 0, flags: 0 }));
   const q = async (sql, ...bind) => (await env.DB.prepare(sql).bind(...bind).all()).results || [];
@@ -509,7 +520,7 @@ async function adminOverview(req, env, url) {
   const sr = await env.DB.prepare("SELECT AVG(current_streak) avg, MAX(best_streak) best, SUM(CASE WHEN current_streak>0 THEN 1 ELSE 0 END) onstreak FROM progress").first();
   const iss = await env.DB.prepare("SELECT COUNT(*) n FROM issues WHERE resolved=0").first();
   const weak = await q(`SELECT topic, SUM(correct) c, COUNT(*) n FROM q_log GROUP BY topic HAVING n>=15 ORDER BY 1.0*SUM(correct)/COUNT(*) ASC LIMIT 8`);
-  return json({
+  const resp = json({
     ok: true, day,
     kpi: {
       students: g.students, playedEver: g.players, activeToday: g.activeToday, active7d: g.active7d,
@@ -521,12 +532,15 @@ async function adminOverview(req, env, url) {
     batches,
     weakTopics: weak.map(w => ({ topic: w.topic, accuracy: Math.round(100 * w.c / w.n), n: w.n }))
   });
+  resp.headers.set("Cache-Control", "max-age=60"); await _cache.put(_ck, resp.clone()); return resp;
 }
 // One batch → per-student rows + that batch's weakest topics.
 async function adminBatch(req, env, url) {
   if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
   const batch = url.searchParams.get("batch") || "";
   if (!batch) return json({ ok: false, error: "batch required" }, 400);
+  const _cache = caches.default, _ck = new Request("https://adm.cache/batch?b=" + encodeURIComponent(batch));
+  const _hit = await _cache.match(_ck); if (_hit) return _hit;
   const students = (await env.DB.prepare(
     `SELECT st.pin, st.name,
        COALESCE(p.current_streak,0) streak, COALESCE(p.best_streak,0) best, p.last_day,
@@ -541,12 +555,13 @@ async function adminBatch(req, env, url) {
   const weak = (await env.DB.prepare(
     `SELECT ql.topic, SUM(ql.correct) c, COUNT(*) n FROM q_log ql JOIN students st ON st.pin=ql.pin
      WHERE st.batch=? GROUP BY ql.topic HAVING n>=8 ORDER BY 1.0*SUM(ql.correct)/COUNT(*) ASC LIMIT 8`).bind(batch).all()).results || [];
-  return json({
+  const resp = json({
     ok: true, batch,
     students: students.map(s => ({ ...s, accuracy: s.qTotal ? Math.round(100 * s.qCorrect / s.qTotal) : null,
       active: !!(s.last_day) })),
     weakTopics: weak.map(w => ({ topic: w.topic, accuracy: Math.round(100 * w.c / w.n), n: w.n }))
   });
+  resp.headers.set("Cache-Control", "max-age=60"); await _cache.put(_ck, resp.clone()); return resp;
 }
 // One student → profile, per-topic accuracy, level clears, recent dailies, open misses.
 async function adminStudent(req, env, url) {
