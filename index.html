@@ -203,7 +203,7 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 "use strict";
 const CONFIG={API:"https://ipmat-arena.jaydev-jaswani.workers.dev"};
 const $=s=>document.querySelector(s),el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};   // LOCAL date (IST), not UTC — fixes late-night rollover
 /* theme toggle */
 const curTheme=()=>document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
 function syncThemeIcon(){const b=$("#themeBtn");if(b)b.textContent=curTheme()==="dark"?"☀️":"🌙";}

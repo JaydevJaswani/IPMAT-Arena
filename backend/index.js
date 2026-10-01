@@ -52,6 +52,7 @@ export default {
       if (p === "/report")               return await report(req, env);
       if (p === "/bookmark")             return await bookmarkToggle(req, env);
       if (p === "/bookmarks")            return await bookmarksList(url, env);
+      if (p === "/grade-q")              return await gradeOne(req, env);
       if (p === "/switch")               return await logSwitch(req, env);
       if (p === "/admin/issues")         return await adminIssues(req, env);
       if (p === "/admin/switches")       return await adminSwitches(req, env);
@@ -440,6 +441,15 @@ async function bookmarksList(url, env) {
     answer: r.answer_display || "", solution: r.solution || "", created_at: r.created_at
   }));
   return json({ ok: true, ids: rows.map(r => r.qkey), items });
+}
+// Grade a single question by id (for re-attempting a saved/bookmarked question). Not logged.
+async function gradeOne(req, env) {
+  const b = await req.json(), qkey = String(b.qkey || "").slice(0, 120), given = b.given;
+  const q = await env.DB.prepare("SELECT type,answer,answer_display,solution FROM questions WHERE id=?").bind(qkey).first();
+  if (!q) return json({ ok: false, error: "not found" }, 404);
+  let correct = false;
+  if (given != null && given !== "") correct = q.type === "int" ? Number(given) === Number(q.answer) : normAns(given) === normAns(q.answer);
+  return json({ ok: true, correct, answer: q.answer_display || q.answer, solution: q.solution || "" });
 }
 async function adminIssues(req, env) {
   if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
