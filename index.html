@@ -124,6 +124,24 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .svq .svbtn.try{color:var(--primary);border-color:color-mix(in srgb,var(--primary) 40%,var(--surface))}
 .svtry{margin-top:12px}.svtry .answers{margin-top:0}
 .svfb{margin-top:10px;font-weight:800;font-size:14px}.svfb.ok{color:var(--green)}.svfb.no{color:var(--bad)}
+.insights .trend{display:flex;gap:8px;align-items:flex-end;padding:2px}
+.insights .tb{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.insights .tbar{width:100%;max-width:28px;height:56px;background:var(--card2);border-radius:7px;display:flex;align-items:flex-end;overflow:hidden}
+.insights .tbar i{display:block;width:100%;border-radius:7px;background:var(--faint);transition:height .4s}
+.insights .tbar i.hi{background:var(--green)}.insights .tbar i.mid{background:var(--amber)}.insights .tbar i.lo{background:var(--bad)}.insights .tbar i.none{background:var(--line)}
+.insights .tb span{font-size:11px;color:var(--faint);font-weight:700}
+.insights .trendcap{font-size:12.5px;color:var(--muted);margin:10px 2px 2px;font-weight:600}
+.insights .twrow{display:flex;gap:16px;flex-wrap:wrap;margin:15px 0 4px}
+.insights .tw{display:flex;flex-direction:column;gap:5px}.insights .tw .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:800}
+.insights .chip.ok{background:color-mix(in srgb,var(--green) 15%,var(--surface));color:var(--good)}
+.insights .chip.no{background:color-mix(in srgb,var(--bad) 13%,var(--surface));color:var(--bad)}
+.nbabtn{display:grid;grid-template-columns:1fr auto;grid-template-areas:"l l" "t g";gap:3px 10px;width:100%;margin-top:16px;background:color-mix(in srgb,var(--primary) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--primary) 30%,var(--surface));border-radius:13px;padding:12px 14px;text-align:left;cursor:pointer}
+.nbabtn .nl{grid-area:l;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);font-weight:800}
+.nbabtn .nt{grid-area:t;font-size:14.5px;font-weight:600;color:var(--ink)}
+.nbabtn .go{grid-area:g;align-self:center;color:var(--primary);font-weight:800;font-size:18px}
+.welcome{max-width:420px}.welcome .wh{font-family:var(--disp);font-weight:800;font-size:22px}.welcome .wsub{color:var(--muted);font-size:14px;margin:6px 0 14px}
+.wlist{display:flex;flex-direction:column;gap:12px;margin-bottom:6px}
+.wi{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;line-height:1.45}.wi .we{font-size:20px;flex-shrink:0}.wi b{color:var(--ink)}
 .svq .ansbox{margin-top:10px}.svq .ansbox .aa{font-weight:800;color:var(--green);margin-bottom:6px}
 .svq .ansbox .ss{color:var(--ink);font-size:13px;white-space:pre-line;font-family:var(--mono);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;line-height:1.6}
 .modal{position:fixed;inset:0;background:rgba(20,10,40,.4);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -398,12 +416,13 @@ async function openHub(){
       <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
       <button class="tile saved" id="tSaved"><span class="ic">⭐</span><span><span class="tt">Saved</span><span class="ts">Your bookmarked questions to revise</span></span><span class="go" id="savedGo">→</span></button>
     </div>
+    <div id="insightsWrap"></div>
     <div class="section-h"><h2>Conquest by area</h2><span class="mono" style="font-size:12px;color:var(--faint)">points</span></div>
     <div class="card" id="areaCard"><div class="spin"></div></div>`;
   $("#tDaily").onclick=startDaily;$("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");$("#tSaved").onclick=openSaved;
   updateStreakPill(0);
   loadBookmarks();
-  try{const m=await api("/me?pin="+encodeURIComponent(ME.pin));if(m.ok){
+  try{const m=await api("/me?pin="+encodeURIComponent(ME.pin)+"&day="+today());if(m.ok){
     $("#hSolved").textContent=m.solved;$("#hAcc").textContent=m.seen?Math.round(m.solved/m.seen*100)+"%":"—";updateStreakPill(m.streak);
     $("#hCP").textContent=m.conquest;$("#hCPsub").textContent=m.solved+" solved of "+m.seen+" seen";
     const cb=m.comeback;$("#hCB").textContent=cb.total?cb.resolved+"/"+cb.total:"0";
@@ -415,9 +434,28 @@ async function openHub(){
     else{const eve=new Date().getHours()>=17,st=m.streak||0;
       nz.innerHTML=`<button class="nudge ${eve?'hot':''}" id="nudgeBtn">🔥 <b>${st>0?st+"-day streak on the line":"Start your streak"}</b> — ${eve?"finish today's Daily Duel before midnight":"today's Daily Duel isn't done yet"}<span class="pl">Play →</span></button>`;
       $("#nudgeBtn").onclick=startDaily;}
-    renderAreas(m.mastery);
+    renderAreas(m.mastery);renderInsights(m);
   }}catch(e){}
   try{const lb=await api("/leaderboard?type=daily&day="+today());if(lb.ok){const i=lb.rows.findIndex(x=>x.name===ME.name);$("#hRank").textContent=i>=0?"#"+(i+1):"—";}}catch(e){}
+  maybeWelcome();
+}
+function maybeWelcome(){
+  let seen;try{seen=localStorage.getItem("ipmat_welcomed");}catch(e){}
+  if(seen)return;
+  const wrap=el("div","modal");
+  wrap.innerHTML=`<div class="box welcome">
+    <div class="wh">Welcome to IPMAT Arena 👋</div>
+    <p class="wsub">Your daily Quants training ground. Here's how it works:</p>
+    <div class="wlist">
+      <div class="wi"><span class="we">🔥</span><div><b>Daily Duel</b> — 10 questions, 12 minutes. Same set for everyone, every day. Don't break the streak.</div></div>
+      <div class="wi"><span class="we">🗺️</span><div><b>Conquest</b> — attack any topic, level by level, till you own it.</div></div>
+      <div class="wi"><span class="we">↺</span><div><b>Reconquer</b> — turn the questions you missed into ones you master.</div></div>
+      <div class="wi"><span class="we">⭐</span><div><b>Save</b> tough questions and re-attempt them anytime.</div></div>
+    </div>
+    <div class="mbtns"><button class="btn" id="wGo" style="flex:1">Let's go →</button></div>
+  </div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector("#wGo").onclick=()=>{try{localStorage.setItem("ipmat_welcomed","1");}catch(e){}wrap.remove();};
 }
 const FAMILY={};const TW={"Warm-Up":1,"Exam-Relevant":2,"Heavy & Tricky":3,"Killer":4};
 SYLLABUS.forEach(([f,ts])=>ts.forEach(t=>FAMILY[t]=f));
@@ -428,6 +466,29 @@ function renderAreas(mastery){
   box.innerHTML=(tot===0?`<div class="empty" style="padding:8px 0 14px">Start a Conquest or Daily Duel — your points build up by area here.</div>`:"")
     +SYLLABUS.map(([f])=>{const v=cp[f]||0,pc=Math.round(v/max*100);
     return `<div style="display:flex;align-items:center;gap:11px;margin:9px 0"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">${f}</div><div class="bar" style="margin-top:5px;height:7px"><i style="width:${pc}%"></i></div></div><div class="mono" style="font-weight:700;color:var(--violet);width:36px;text-align:right">${v}</div></div>`;}).join("");
+}
+function renderInsights(m){
+  const box=$("#insightsWrap");if(!box)return;
+  const days=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));}
+  const tmap={};(m.trend||[]).forEach(t=>tmap[t.day]=t);const DOW=["S","M","T","W","T","F","S"];
+  const bars=days.map(ds=>{const t=tmap[ds],pct=t?Math.round(t.correct/(t.total||10)*100):0,lbl=DOW[new Date(ds+"T00:00").getDay()],cls=!t?"none":pct>=80?"hi":pct>=50?"mid":"lo";return `<div class="tb"><div class="tbar"><i class="${cls}" style="height:${t?Math.max(10,pct):3}%"></i></div><span>${lbl}</span></div>`;}).join("");
+  const agg={};(m.mastery||[]).forEach(x=>{const a=agg[x.topic]||(agg[x.topic]={seen:0,solved:0});a.seen+=x.seen;a.solved+=x.solved;});
+  const list=Object.entries(agg).filter(([t,a])=>a.seen>=5).map(([t,a])=>({t,acc:Math.round(100*a.solved/a.seen)}));
+  const strong=list.slice().sort((a,b)=>b.acc-a.acc)[0],weak=list.slice().sort((a,b)=>a.acc-b.acc)[0];
+  let nba,go;
+  if(m.comeback&&m.comeback.open>0){nba=`Fix ${m.comeback.open} mistake${m.comeback.open>1?"s":""} in <b>Reconquer</b>`;go=openExtra;}
+  else if(!m.dailyDone){nba=`Today's <b>Daily Duel</b> is waiting`;go=startDaily;}
+  else if(weak&&weak.acc<80){nba=`Sharpen <b>${dName(weak.t)}</b> in Conquest`;go=openConquest;}
+  else{nba=`You're on track — keep the streak alive 🔥`;go=startDaily;}
+  const played=(m.trend||[]).length;
+  box.innerHTML=`<div class="section-h"><h2>Your momentum</h2><span class="mono" style="font-size:12px;color:var(--faint)">last 7 days</span></div>
+    <div class="card insights">
+      <div class="trend">${bars}</div>
+      <div class="trendcap">${played?`${played}/7 days active · ${m.streak||0}-day streak`:"No Duels yet this week — start today 🔥"}</div>
+      ${(strong||weak)?`<div class="twrow">${strong?`<div class="tw"><span class="lbl">Strongest</span><span class="chip ok">${dName(strong.t)} · ${strong.acc}%</span></div>`:""}${weak&&(!strong||weak.t!==strong.t)?`<div class="tw"><span class="lbl">Needs work</span><span class="chip no">${dName(weak.t)} · ${weak.acc}%</span></div>`:""}</div>`:""}
+      <button class="nbabtn" id="nbaBtn"><span class="nl">Next best move</span><span class="nt">${nba}</span><span class="go">→</span></button>
+    </div>`;
+  const nb=$("#nbaBtn");if(nb&&go)nb.onclick=go;
 }
 function openConquest(){show("conquest");const s=$("#conquest");
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Conquest · Practice</h2><span class="link" id="cqBack">← Home</span></div>

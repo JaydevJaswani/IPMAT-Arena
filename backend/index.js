@@ -89,8 +89,11 @@ async function me(url, env) {
   const stu = await env.DB.prepare("SELECT name, batch FROM students WHERE pin=?").bind(pin).first();
   if (!stu) return json({ ok: false }, 200);
   const pr = await env.DB.prepare("SELECT xp,current_streak,best_streak,last_day FROM progress WHERE pin=?").bind(pin).first();
-  const day = new Date().toISOString().slice(0, 10);
+  const day = (url.searchParams.get("day") || new Date().toISOString().slice(0, 10)).slice(0, 10);   // client sends LOCAL day
   const done = await env.DB.prepare("SELECT 1 FROM attempts WHERE pin=? AND set_id=?").bind(pin, "daily-" + day).first();
+  // last-7-day Daily Duel trend (cheap, indexed by pin)
+  const trend = (await env.DB.prepare(
+    "SELECT day, correct, total, score FROM attempts WHERE pin=? AND set_id LIKE 'daily-%' AND day>=date(?, '-6 days') ORDER BY day").bind(pin, day).all()).results;
   // topic × level tally
   const mastery = (await env.DB.prepare(
     "SELECT topic,tier,COUNT(*) seen,COALESCE(SUM(correct),0) solved FROM q_log WHERE pin=? GROUP BY topic,tier").bind(pin).all()).results;
@@ -103,7 +106,7 @@ async function me(url, env) {
   const peer = (await env.DB.prepare("SELECT COALESCE(AVG(c),0) avg FROM (SELECT COUNT(*) c FROM q_log WHERE is_redo=1 GROUP BY pin)").first()).avg;
   return json({ ok: true, name: stu.name, batch: stu.batch,
     xp: pr ? pr.xp : 0, streak: pr ? pr.current_streak : 0, best: pr ? pr.best_streak : 0, dailyDone: !!done,
-    conquest: cp.cp || 0, seen: cp.seen || 0, solved: cp.solved || 0, mastery,
+    conquest: cp.cp || 0, seen: cp.seen || 0, solved: cp.solved || 0, mastery, trend,
     comeback: { resolved: w.resolved || 0, total: w.total || 0, open: (w.total || 0) - (w.resolved || 0),
       redos: myRedos, peerAvg: Math.round((peer || 0) * 10) / 10 } });
 }
