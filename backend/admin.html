@@ -130,6 +130,11 @@ async function renderDash(){const t=$("#tab");t.innerHTML='<div class="spin"></d
     ["Focus flags",k.flags,"tab-switches logged"]
   ];
   let html='<div class="kpis">'+kpis.map(x=>`<div class="kpi"><div class="v">${x[1]}</div><div class="l">${x[0]}</div><div class="s">${x[2]}</div></div>`).join("")+'</div>';
+  const pd=OV.pointDrops||[];
+  html+='<div class="card" style="'+(pd.length?'border-color:var(--bad)':'')+'"><h2 style="margin-top:0">🛡️ Points integrity</h2>'+
+    (pd.length
+      ? '<div class="mini" style="color:var(--bad);font-weight:700;margin-bottom:8px">'+pd.length+' student(s) had Conquest Points DROP — investigate:</div><div class="scroll"><table><thead><tr><th>Student</th><th>Batch</th><th class="num">Was</th><th class="num">Now</th><th>When</th></tr></thead><tbody>'+pd.map(d=>`<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.batch)}</td><td class="num">${d.prev}</td><td class="num"><span class="tag r">${d.now}</span></td><td>${esc(d.day)}</td></tr>`).join('')+'</tbody></table></div>'
+      : '<div class="mini"><span class="tag g">✓ All clear</span> No point drops detected. Checked nightly.</div>')+'</div>';
   html+='<div class="card"><h2 style="margin-top:0">Weakest topics (whole cohort)</h2>'+
     (OV.weakTopics.length?'<div class="chips">'+OV.weakTopics.map(w=>`<span class="wchip">${esc(w.topic)} · <b>${w.accuracy}%</b> <span class="mini">(${w.n})</span></span>`).join("")+'</div>':'<div class="mini">Not enough attempts yet.</div>')+'</div>';
   html+='<div class="card"><h2 style="margin-top:0">By batch <span class="mini">· tap a row for students</span></h2><div class="scroll"><table id="btbl"><thead><tr>'+

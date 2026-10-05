@@ -24,6 +24,10 @@ const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", ...CORS } });
 
 export default {
+  // Nightly cron (00:00 IST = 18:30 UTC): snapshot every student's points + flag any drop.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runSnapshot(env));
+  },
   async fetch(req, env) {
     if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
     const url = new URL(req.url);
@@ -56,6 +60,7 @@ export default {
       if (p === "/switch")               return await logSwitch(req, env);
       if (p === "/admin/issues")         return await adminIssues(req, env);
       if (p === "/admin/switches")       return await adminSwitches(req, env);
+      if (p === "/admin/snapshot")       return await adminSnapshot(req, env);
       if (p === "/admin/overview")       return await adminOverview(req, env, url);
       if (p === "/admin/batch")          return await adminBatch(req, env, url);
       if (p === "/admin/student")        return await adminStudent(req, env, url);
@@ -486,6 +491,37 @@ async function adminSwitches(req, env) {
   return json({ ok: true, switches: r.results });
 }
 
+// ---- points safeguard: daily snapshot + drop detection ----
+// Conquest Points are a cumulative sum of correct answers and should only ever rise.
+// Each night we snapshot every student's totals; if any value fell vs the prior snapshot, we log it.
+async function runSnapshot(env) {
+  const day = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10); // IST date
+  const rows = (await env.DB.prepare(
+    `SELECT pin, COUNT(*) seen, COALESCE(SUM(correct),0) solved,
+       COALESCE(SUM(CASE WHEN correct=1 THEN ${tierWeightSQL} ELSE 0 END),0) conquest
+     FROM q_log GROUP BY pin`).all()).results || [];
+  // most recent prior snapshot (per pin) to compare against
+  const prev = {};
+  (await env.DB.prepare(
+    "SELECT pin, conquest FROM points_snapshots WHERE day=(SELECT MAX(day) FROM points_snapshots WHERE day<?)").bind(day).all())
+    .results.forEach(r => { prev[r.pin] = r.conquest; });
+  const ins = [], drops = [];
+  for (const r of rows) {
+    ins.push(env.DB.prepare(
+      "INSERT INTO points_snapshots (pin,day,conquest,solved,seen) VALUES (?,?,?,?,?) ON CONFLICT(pin,day) DO UPDATE SET conquest=?,solved=?,seen=?")
+      .bind(r.pin, day, r.conquest, r.solved, r.seen, r.conquest, r.solved, r.seen));
+    if (r.pin in prev && r.conquest < prev[r.pin])
+      drops.push(env.DB.prepare("INSERT INTO point_drops (pin,day,prev,now) VALUES (?,?,?,?)").bind(r.pin, day, prev[r.pin], r.conquest));
+  }
+  for (let i = 0; i < ins.length; i += 200) await env.DB.batch(ins.slice(i, i + 200));
+  if (drops.length) await env.DB.batch(drops);
+  return { day, students: rows.length, drops: drops.length };
+}
+async function adminSnapshot(req, env) {
+  if (!requireAdmin(req, env)) return json({ ok: false, error: "unauthorized" }, 401);
+  return json({ ok: true, ...(await runSnapshot(env)) });
+}
+
 // ---- mentor dashboard ----
 // Per-batch engagement + accuracy + integrity, merged from a few grouped queries.
 async function adminOverview(req, env, url) {
@@ -523,8 +559,10 @@ async function adminOverview(req, env, url) {
   const sr = await env.DB.prepare("SELECT AVG(current_streak) avg, MAX(best_streak) best, SUM(CASE WHEN current_streak>0 THEN 1 ELSE 0 END) onstreak FROM progress").first();
   const iss = await env.DB.prepare("SELECT COUNT(*) n FROM issues WHERE resolved=0").first();
   const weak = await q(`SELECT topic, SUM(correct) c, COUNT(*) n FROM q_log GROUP BY topic HAVING n>=15 ORDER BY 1.0*SUM(correct)/COUNT(*) ASC LIMIT 8`);
+  const drops = await q(`SELECT pd.pin, st.name, st.batch, pd.prev, pd.now, pd.day FROM point_drops pd LEFT JOIN students st ON st.pin=pd.pin ORDER BY pd.id DESC LIMIT 20`);
   const resp = json({
     ok: true, day,
+    pointDrops: drops.map(d => ({ name: d.name || d.pin, batch: d.batch || "", prev: d.prev, now: d.now, day: d.day })),
     kpi: {
       students: g.students, playedEver: g.players, activeToday: g.activeToday, active7d: g.active7d,
       dailyDoneRate: g.students ? Math.round(100 * g.activeToday / g.students) : 0,
