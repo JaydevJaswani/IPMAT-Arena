@@ -46,6 +46,7 @@ export default {
       if (p === "/test-status")          return await testStatus(url, env);
       if (p === "/review")               return await review(url, env);
       if (p === "/extra")                return await extra(url, env);
+      if (p === "/reconquer-submit")     return await reconquerSubmit(req, env);
       if (p === "/redo")                 return await redo(req, env);
       if (p === "/practice")             return await practice(url, env);
       if (p === "/pgrade")               return await pgrade(req, env);
@@ -329,11 +330,30 @@ async function review(url, env) {
   return json({ ok: true, test: t, questions: qs.map(q => ({ ...q, options: q.options ? JSON.parse(q.options) : null,
     correct: (id + ":" + q.seq) in lm ? !!lm[id + ":" + q.seq] : null })) });
 }
+// Reconquer list = the student's EXACT unresolved misses (joined to the real question),
+// newest-missed first. JOIN to questions excludes legacy generator ('g:') wrongs that can't be re-served.
 async function extra(url, env) {
   const pin = cleanPin(url.searchParams.get("pin"));
-  const r = (await env.DB.prepare(
-    "SELECT qkey,topic,tier,gen_id,misses FROM wrongs WHERE pin=? AND resolved=0 ORDER BY misses DESC, rowid DESC LIMIT 20").bind(pin).all()).results;
-  return json({ ok: true, wrongs: r });
+  const rows = (await env.DB.prepare(
+    `SELECT w.qkey, w.topic, w.tier, w.misses, q.type, q.stem, q.options
+     FROM wrongs w JOIN questions q ON q.id=w.qkey
+     WHERE w.pin=? AND w.resolved=0 ORDER BY w.rowid DESC LIMIT 30`).bind(pin).all()).results || [];
+  const wrongs = rows.map(r => ({ qkey: r.qkey, topic: r.topic, tier: r.tier, misses: r.misses,
+    type: r.type, stem: r.stem, options: r.options ? JSON.parse(r.options) : null }));
+  return json({ ok: true, wrongs });
+}
+// Grade one Reconquer attempt (the EXACT missed question); resolve the miss on a correct answer.
+// Progress persists server-side — a student can clear a few now and the rest later.
+async function reconquerSubmit(req, env) {
+  const b = await req.json(), pin = cleanPin(b.pin), qkey = String(b.qkey || "").slice(0, 120), given = b.given;
+  const q = await env.DB.prepare("SELECT type,topic,tier,answer,answer_display,solution FROM questions WHERE id=?").bind(qkey).first();
+  if (!q) return json({ ok: false, error: "not found" }, 404);
+  let ok = false;
+  if (given != null && given !== "") ok = q.type === "int" ? Number(given) === Number(q.answer) : normAns(given) === normAns(q.answer);
+  await qlogStmt(env).bind(pin, q.topic || "", q.tier || "Exam-Relevant", qkey, "extra", ok ? 1 : 0, 1).run();
+  let resolved = false;
+  if (ok) { const r = await env.DB.prepare("UPDATE wrongs SET resolved=1 WHERE pin=? AND qkey=? AND resolved=0").bind(pin, qkey).run(); resolved = (((r.meta && r.meta.changes) || 0) > 0); }
+  return json({ ok: true, correct: ok, resolved, answer: q.answer_display || q.answer, solution: q.solution || "" });
 }
 async function redo(req, env) {
   const { pin, items } = await req.json();

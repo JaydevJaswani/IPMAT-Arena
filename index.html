@@ -708,54 +708,49 @@ async function submitDaily(){if(_ddSending)return;_ddSending=true;
     rev.appendChild(row);});
   s.append(rev);show("results");setTimeout(()=>{const f=$("#fill");if(f)f.style.width=myPct+"%";},160);
   $("#toBoard").onclick=()=>openBoard("daily");$("#toExtra").onclick=openExtra;DD.submitting=false;}
-/* ---------- RECONQUER (3 variants per missed question) ---------- */
-let ex={list:[],i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};
-function exKey(){return "rc:"+(ME?ME.pin:"?");}
-function exSave(){try{localStorage.setItem(exKey(),JSON.stringify(ex));}catch(e){}}
-function exLoad(){try{const s=localStorage.getItem(exKey());return s?JSON.parse(s):null;}catch(e){return null;}}
-function exClear(){try{localStorage.removeItem(exKey());}catch(e){}}
+/* ---------- RECONQUER (re-serve the EXACT missed questions; progress saved server-side) ---------- */
+let ex={list:[],i:0,answered:false,sel:null,resolved:0,ansText:null,lastSol:null,lastCorrect:false,submitting:false};
 async function openExtra(){show("extra");const s=$("#extra");
-  const saved=exLoad();
-  if(saved&&saved.list&&saved.list.length&&saved.i<saved.list.length){ex=saved;exRender();ddToast("↺ Resumed — picking up your Reconquer");return;}
-  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
-  let r;try{r=await api("/extra?pin="+encodeURIComponent(ME.pin));}catch(e){s.querySelector(".card").innerHTML=`<div class="empty">Couldn't load.</div>`;return;}
-  if(!r.ok||!r.wrongs.length){exClear();s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared your misses.<br>Play the Daily Duel to find your next challenge.</div></div>`;return;}
-  ex={list:r.wrongs.slice(0,5),i:0,v:0,setCorrect:0,items:[],sel:null,answered:false,cur:null};exSave();exRender();}
-function exGen(){const w=ex.list[ex.i];return (w.gen_id&&GBYID[w.gen_id])?GBYID[w.gen_id]:genForTopic(w.topic);}
-function exRender(){const s=$("#extra"),w=ex.list[ex.i];
-  if(!ex.cur){const gen=exGen();ex.cur=gen.make();ex.cur.topic=gen.topic;ex.cur.tier=gen.tier||w.tier;ex.curGen=gen.id;ex.answered=false;ex.sel=null;}
-  setReportCtx(w.qkey,"extra",ex.cur.q);const q=ex.cur;
-  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="mono" style="font-size:12px;color:var(--faint)">mistake ${ex.i+1} / ${ex.list.length}</span></div>
-    <div class="card"><div style="font-size:12.5px;color:var(--green);font-weight:800;margin-bottom:8px">↺ REMATCH ${ex.v+1} of 3 · same idea, new numbers</div>
-    <div class="pmeter" style="margin-bottom:12px"><div class="rg"><i style="width:${Math.round(((ex.v)+(ex.answered?1:0))/3*100)}%"></i></div><div class="lbl">${ex.setCorrect}/3 right — need 2 to clear</div></div>
-    <div class="qmeta"><span class="chip t">${q.topic}</span><span class="chip ${tierClass(q.tier)}">${q.tier||"Practice"}</span></div>
-    <div class="qtext">${q.q}</div><div class="answers" id="exA"></div><div id="exFb"></div><div class="navrow" id="exBtns"></div></div>`;
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="link" id="exHome">← Home</span></div><div class="card"><div class="spin"></div></div>`;
+  $("#exHome").onclick=openHub;
+  let r;try{r=await api("/extra?pin="+encodeURIComponent(ME.pin));}catch(e){s.querySelector(".card").innerHTML=`<div class="empty">Couldn't load — check your connection and try again.</div>`;return;}
+  if(!r.ok||!r.wrongs||!r.wrongs.length){s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="link" id="exHome2">← Home</span></div><div class="card"><div class="empty">🎉 Nothing to reconquer — you've cleared all your misses.<br>Play the Daily Duel or a Conquest level to find your next challenge.</div></div>`;$("#exHome2").onclick=openHub;return;}
+  ex={list:r.wrongs,i:0,answered:false,sel:null,resolved:0,ansText:null,lastSol:null,lastCorrect:false,submitting:false};exRender();}
+function exRender(){const q=ex.list[ex.i];setReportCtx(q.qkey,"extra",q.stem);const s=$("#extra");
+  const prog=Math.round((ex.i+(ex.answered?1:0))/ex.list.length*100);
+  s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2><span class="mono" style="font-size:12px;color:var(--faint)">${ex.i+1} / ${ex.list.length} · ${ex.resolved} cleared</span></div>
+    <div class="pmeter" style="margin-bottom:12px"><div class="rg"><i style="width:${prog}%"></i></div><div class="lbl">Your exact misses — get it right and it's cleared for good ✓</div></div>
+    <div class="card"><div class="qmeta"><span class="chip t">${dName(q.topic)||"Quant"}</span>${q.tier?`<span class="chip ${tierClass(q.tier)}">${q.tier}</span>`:""}${q.misses>1?`<span class="chip heavy">missed ${q.misses}×</span>`:""}</div>
+    <div class="qtext">${q.stem}</div><div class="answers" id="exA"></div><div id="exFb"></div><div class="navrow" id="exBtns"></div></div>`;
   const A=$("#exA");
-  if(q.kind==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
-    if(ex.answered){if(o===q.answer)b.classList.add("correct");else if(o===ex.sel&&ex.sel!==q.answer)b.classList.add("miss");}
+  if(q.type==="mcq"){q.options.forEach((o,i)=>{const b=el("button","opt","<span class='k'>"+"ABCD"[i]+"</span><span>"+o+"</span>");
+    if(ex.answered){if(o===ex.ansText)b.classList.add("correct");else if(o===ex.sel&&!ex.lastCorrect)b.classList.add("miss");}
     else b.onclick=()=>{ex.sel=o;[...A.children].forEach(c=>c.classList.remove("sel"));b.classList.add("sel");};A.appendChild(b);});}
-  else{const wr=el("div","numin"),inp=el("input");inp.type="text";inp.inputMode="numeric";inp.placeholder="type your answer";inp.id="exNum";
-    if(ex.answered){inp.value=ex.sel;inp.disabled=true;}else inp.addEventListener("keydown",e=>{if(e.key==="Enter")exLock();});wr.appendChild(inp);A.appendChild(wr);if(!ex.answered)setTimeout(()=>inp.focus(),40);}
-  if(ex.answered)$("#exFb").appendChild(fbBlock(ex.lastCorrect,null,q));
+  else{const w=el("div","numin"),inp=el("input");inp.id="exNum";inp.type="text";inp.inputMode="none";inp.readOnly=true;inp.placeholder="tap the keypad";
+    if(ex.answered){inp.value=ex.sel;}w.appendChild(inp);A.appendChild(w);if(!ex.answered)A.appendChild(numKeypad(inp));}
+  if(ex.answered)$("#exFb").appendChild(fbBlock(ex.lastCorrect,null,{answer:ex.ansText,trap:"",sol:ex.lastSol||""}));
   const btns=$("#exBtns");
-  if(!ex.answered){const lk=el("button","btn","Check");lk.onclick=exLock;btns.appendChild(lk);}
-  else{const lastV=ex.v>=2,lastW=ex.i>=ex.list.length-1,label=lastV?(lastW?"Finish":"Next mistake →"):"Next variant →";const n=el("button","btn",label);n.onclick=exNext;btns.appendChild(n);}
-  exSave();}
-function exLock(){const q=ex.cur;let correct;
-  if(q.kind==="mcq"){if(ex.sel==null)return;correct=(ex.sel===q.answer);}
-  else{const v=($("#exNum").value||"").trim();if(v==="")return;ex.sel=v;correct=(Number(v)===Number(q.answer));}
-  ex.answered=true;ex.lastCorrect=correct;if(correct)ex.setCorrect++;exRender();}
+  if(!ex.answered){const c=el("button","btn","Check");c.onclick=()=>{c.disabled=true;exLock();};btns.appendChild(c);}
+  else{const last=ex.i>=ex.list.length-1,n=el("button","btn",last?"Finish →":(ex.lastCorrect?"Next →":"Skip for now →"));n.onclick=exNext;btns.appendChild(n);}
+}
+async function exLock(){if(ex.answered||ex.submitting)return;
+  const q=ex.list[ex.i];let given;
+  if(q.type==="mcq"){if(ex.sel==null){exRender();return;}given=ex.sel;}
+  else{const v=($("#exNum").value||"").trim();if(v===""){exRender();return;}given=v;ex.sel=v;}
+  ex.submitting=true;
+  let r;try{r=await api("/reconquer-submit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,qkey:q.qkey,given})});}catch(e){r=null;}
+  ex.submitting=false;
+  if(!r||!r.ok){exRender();return;}
+  ex.answered=true;ex.lastCorrect=r.correct;ex.ansText=r.answer;ex.lastSol=r.solution;if(r.resolved)ex.resolved++;
+  exRender();}
 async function exNext(){
-  if(ex.v<2){ex.v++;ex.cur=null;exRender();return;}
-  const w=ex.list[ex.i];ex.items.push({qkey:w.qkey,genId:ex.curGen,topic:w.topic,tier:w.tier,correct:ex.setCorrect>=2});
-  if(ex.i<ex.list.length-1){ex.i++;ex.v=0;ex.setCorrect=0;ex.cur=null;exRender();return;}
-  exClear();   // whole set done — don't resume a finished session
-  const s=$("#extra");s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquer</h2></div><div class="card"><div class="spin"></div></div>`;
-  let resolved=0;try{const r=await api("/redo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:ME.pin,items:ex.items})});if(r.ok)resolved=r.resolved;}catch(e){}
+  if(ex.i<ex.list.length-1){ex.i++;ex.answered=false;ex.sel=null;ex.ansText=null;ex.lastSol=null;exRender();return;}
+  const s=$("#extra");
   s.innerHTML=`<div class="section-h" style="margin-top:8px"><h2>Reconquered</h2><span class="link" id="exHome">← Home</span></div>
-    <div class="card pop"><div class="scorebig tnum">${resolved}</div><div class="resline">${resolved} of ${ex.items.length} mistake${ex.items.length===1?"":"s"} reconquered · 2-of-3 right clears each</div>
-    <div style="margin-top:14px;color:var(--muted);font-size:14px">${resolved>0?"That's Comeback Index climbing. Coach approves.":"Not cleared — get 2 of 3 next time and they'll drop off your list."}</div>
-    <div style="margin-top:16px"><button class="btn" id="exAgain">Back to Reconquer</button></div></div>`;
+    <div class="card pop"><div class="scorebig tnum">${ex.resolved}</div><div class="resline">${ex.resolved} of ${ex.list.length} cleared this round</div>
+    <div style="margin-top:14px;color:var(--muted);font-size:14px">${ex.resolved>0?"Nice — those are off your list for good. Comeback Index is climbing.":"No clears this round — the ones you missed are saved. Try them again whenever."}</div>
+    <div class="badges" style="margin-top:14px"><span class="badge"><span class="e">↺</span>Progress saved</span></div>
+    <div style="margin-top:16px"><button class="btn" id="exAgain">Keep reconquering</button></div></div>`;
   $("#exHome").onclick=openHub;$("#exAgain").onclick=openExtra;}
 /* ---------- PRACTICE TESTS ---------- */
 let doneMap={};
