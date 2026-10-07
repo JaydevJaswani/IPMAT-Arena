@@ -58,6 +58,7 @@ export default {
       if (p === "/bookmark")             return await bookmarkToggle(req, env);
       if (p === "/bookmarks")            return await bookmarksList(url, env);
       if (p === "/grade-q")              return await gradeOne(req, env);
+      if (p === "/hint")                 return await hint(url, env);
       if (p === "/switch")               return await logSwitch(req, env);
       if (p === "/admin/issues")         return await adminIssues(req, env);
       if (p === "/admin/switches")       return await adminSwitches(req, env);
@@ -108,11 +109,12 @@ async function me(url, env) {
      COUNT(*) seen, COALESCE(SUM(correct),0) solved FROM q_log WHERE pin=?`).bind(pin).first();
   // Comeback Index
   const w = await env.DB.prepare("SELECT COUNT(*) total, COALESCE(SUM(resolved),0) resolved FROM wrongs WHERE pin=?").bind(pin).first();
+  const levels = (await env.DB.prepare("SELECT topic, level FROM lattempts WHERE pin=?").bind(pin).all()).results || [];
   const myRedos = (await env.DB.prepare("SELECT COUNT(*) n FROM q_log WHERE pin=? AND is_redo=1").bind(pin).first()).n;
   const peer = (await env.DB.prepare("SELECT COALESCE(AVG(c),0) avg FROM (SELECT COUNT(*) c FROM q_log WHERE is_redo=1 GROUP BY pin)").first()).avg;
   return json({ ok: true, name: stu.name, batch: stu.batch,
     xp: pr ? pr.xp : 0, streak: pr ? pr.current_streak : 0, best: pr ? pr.best_streak : 0, dailyDone: !!done,
-    conquest: cp.cp || 0, seen: cp.seen || 0, solved: cp.solved || 0, mastery, trend,
+    conquest: cp.cp || 0, seen: cp.seen || 0, solved: cp.solved || 0, mastery, trend, levels,
     comeback: { resolved: w.resolved || 0, total: w.total || 0, open: (w.total || 0) - (w.resolved || 0),
       redos: myRedos, peerAvg: Math.round((peer || 0) * 10) / 10 } });
 }
@@ -478,6 +480,17 @@ async function bookmarksList(url, env) {
     answer: r.answer_display || "", solution: r.solution || "", created_at: r.created_at
   }));
   return json({ ok: true, ids: rows.map(r => r.qkey), items });
+}
+// "Stuck? Nudge me" — a one-line method hint (the trap, or the first step of the solution).
+// Deliberately only the opening move, never the final answer.
+async function hint(req_or_url, env) {
+  const url = req_or_url, qkey = String(url.searchParams.get("qkey") || "").slice(0, 120);
+  const q = await env.DB.prepare("SELECT trap, solution FROM questions WHERE id=?").bind(qkey).first();
+  if (!q) return json({ ok: false, error: "not found" }, 404);
+  let h = (q.trap || "").trim();
+  if (!h) { const sol = (q.solution || "").trim(); h = (sol.split(/(?<=[.。!?])\s+/)[0] || sol.slice(0, 140)).trim(); }
+  if (!h) h = "Re-read what's being asked, then write down the formula that fits before you compute.";
+  return json({ ok: true, hint: h });
 }
 // Grade a single question by id (for re-attempting a saved/bookmarked question). Not logged.
 async function gradeOne(req, env) {

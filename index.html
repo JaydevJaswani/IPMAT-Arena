@@ -164,6 +164,34 @@ input::placeholder{color:var(--faint);font-family:var(--body);letter-spacing:0}i
 .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--primary);border-radius:50%;animation:sp 1s linear infinite;margin:20px auto}@keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* ---- A+B home: mission, improvement, mastery/prestige ---- */
+.mission .mtop{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.mission .mtitle{font-family:var(--disp);font-weight:800;font-size:clamp(26px,8vw,34px);margin:8px 0 2px;color:#fff;line-height:1.02}
+.mission .msub{color:#fff;opacity:.92;font-size:13.5px;margin:0}
+.mstart{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#fff;color:#E23A1E;font-family:var(--disp);font-weight:800;font-size:17px;border:0;border-radius:13px;padding:14px;margin-top:14px;box-shadow:0 10px 22px -10px rgba(0,0,0,.3);cursor:pointer}
+.mstart:active{transform:scale(.99)}
+.mission.done .mstart{background:rgba(255,255,255,.2);color:#fff}
+.mission.urgent{box-shadow:0 0 0 3px rgba(244,51,95,.55),0 20px 40px -18px rgba(255,61,139,.6)}
+.coachline{display:flex;gap:9px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.25);font-size:12.5px;color:#fff;opacity:.95;line-height:1.4}
+.coachline .cav{width:30px;height:30px;border-radius:9px;overflow:hidden;flex-shrink:0;display:inline-flex}
+.improve{display:flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--green) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--green) 30%,var(--surface));color:var(--good);border-radius:13px;padding:10px 13px;font-weight:700;font-size:13px;margin:12px 0}
+.improve.soft{background:var(--card2);border-color:var(--line);color:var(--muted)}
+.improve.soft .ar{display:none}
+.mast{display:flex;flex-direction:column;gap:9px}
+.mast .mrow{display:flex;align-items:center;gap:10px}
+.mast .nm{font-size:12.5px;font-weight:700;width:34%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mast .bar{flex:1;height:8px;border-radius:999px;background:var(--card2);overflow:hidden}
+.mast .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--violet),var(--pink))}
+.mast .star{width:16px;text-align:center;font-size:14px}
+.mast .star.on{color:var(--gold)}.mast .star.off{color:var(--line)}
+.prestige{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 16%,var(--surface)),color-mix(in srgb,var(--amber) 13%,var(--surface)));border:1px solid color-mix(in srgb,var(--gold) 40%,var(--surface));border-radius:13px;padding:10px 12px;margin-bottom:12px}
+.prestige .pz{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#FFD05B,#FFB800);display:grid;place-items:center;font-size:17px;color:#7a5600;flex-shrink:0}
+.prestige b{font-size:13.5px}.prestige .psub{font-size:11.5px;color:var(--muted);font-weight:600}
+.nudgebtn{color:#9a6100;border-color:color-mix(in srgb,var(--amber) 42%,var(--surface));margin-top:8px}
+.hintbox{background:color-mix(in srgb,var(--amber) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--amber) 34%,var(--surface));color:var(--ink);border-radius:12px;padding:11px 13px;font-size:13.5px;line-height:1.5;margin-bottom:10px}
+.hintbox .hl{font-weight:800;color:#9a6100;margin-right:3px}
+:root[data-theme="dark"] .nudgebtn,:root[data-theme="dark"] .hintbox .hl{color:#FFCF8A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nudgebtn,:root:not([data-theme="light"]) .hintbox .hl{color:#FFCF8A}}
 /* ---- dark theme ---- */
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#140F1C;--card:#1E1830;--card2:#271F3C;--surface:#1E1830;--ink:#F2EEFA;--muted:#ADA3C6;--faint:#7A6F9B;--line:#332B49;--shadow:0 14px 34px -16px rgba(0,0,0,.7);color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#140F1C;--card:#1E1830;--card2:#271F3C;--surface:#1E1830;--ink:#F2EEFA;--muted:#ADA3C6;--faint:#7A6F9B;--line:#332B49;--shadow:0 14px 34px -16px rgba(0,0,0,.7);color-scheme:dark}
@@ -401,43 +429,66 @@ $("#loginBtn").onclick=doLogin;$("#pin").addEventListener("keydown",e=>{if(e.key
 function updateStreakPill(n){const p=$("#topStreak");p.hidden=false;p.innerHTML=`🔥 <b>${n}</b>`;}
 const COACH=["Miss a day and the streak resets. Don't hand me that excuse.","Your mistakes are the map. Go reconquer them.","Ranks are earned before 9am. Get your Daily Duel in.","Speed is a skill. Solve, don't stare."];
 async function openHub(){
-  show("hub");const h=$("#hub");
-  h.innerHTML=`<div class="hero"><div class="eyebrow">Welcome back</div><h1>${ME.name.split(" ")[0]}.</h1><p class="sub">Batch ${ME.batch} · Gold League.</p>
-    <div class="coachrow"><span class="av">${AV_GURU}</span><div class="msg"><b>Coach WarGuru:</b> ${pick(COACH)}</div></div></div>
-    <div id="streakNudge"></div>
-    <div class="statrow"><div class="stat c1"><div class="n tnum" id="hRank">—</div><div class="l">Today's rank</div></div><div class="stat c2"><div class="n tnum" id="hSolved">—</div><div class="l">Solved</div></div><div class="stat c3"><div class="n tnum" id="hAcc">—</div><div class="l">Accuracy</div></div></div>
-    <div class="score2"><div class="bigstat cp"><div class="h">⚔️ Conquest Points</div><div class="v tnum" id="hCP">—</div><div class="subv" id="hCPsub">solving score · harder = more</div></div>
-      <div class="bigstat cb"><div class="h">↺ Comeback Index</div><div class="v tnum" id="hCB">—</div><div class="subv" id="hCBsub">mistakes reconquered</div></div></div>
-    <div class="tiles">
-      <button class="tile daily" id="tDaily"><span class="ic">🔥</span><span><span class="tt">Daily Duel</span><span class="ts">Same 10 for everyone · 12 min</span></span><span class="go" id="dailyGo">→</span></button>
-      <button class="tile map" id="tConquest"><span class="ic">🗺️</span><span><span class="tt">Conquest</span><span class="ts">Warm up &amp; grind · unlimited practice, level by level</span></span><span class="go">→</span></button>
-      <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Reconquer</span><span class="ts">Only the questions you got wrong</span></span><span class="go" id="extraGo">→</span></button>
-      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Timed topic tests · unlock by conquering a topic</span></span><span class="go">🔒</span></button>
-      <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak · batch</span></span><span class="go">→</span></button>
-      <button class="tile saved" id="tSaved"><span class="ic">⭐</span><span><span class="tt">Saved</span><span class="ts">Your bookmarked questions to revise</span></span><span class="go" id="savedGo">→</span></button>
+  show("hub");const h=$("#hub");const fn=ME.name.split(" ")[0];
+  h.innerHTML=`<div class="hero mission" id="missionCard">
+      <div class="mtop"><span class="eyebrow">Hi ${fn} · ${ME.batch}</span><span class="eyebrow" id="missTag">Today's mission</span></div>
+      <h1 class="mtitle" id="missTitle">Daily Duel</h1>
+      <p class="msub" id="missSub">10 questions · 12 minutes · same for everyone</p>
+      <button class="mstart" id="missionBtn">Start now →</button>
+      <div class="coachline"><span class="cav">${AV_GURU}</span><span><b>Coach WarGuru:</b> ${pick(COACH)}</span></div>
     </div>
+    <div id="improveBar"></div>
+    <div class="statrow"><div class="stat c1"><div class="n tnum" id="hRank">—</div><div class="l">Today's rank</div></div><div class="stat c2"><div class="n tnum" id="hCP">—</div><div class="l">Conquest pts</div></div><div class="stat c3"><div class="n tnum" id="hAcc">—</div><div class="l">Accuracy</div></div></div>
     <div id="insightsWrap"></div>
-    <div class="section-h"><h2>Conquest by area</h2><span class="mono" style="font-size:12px;color:var(--faint)">points</span></div>
-    <div class="card" id="areaCard"><div class="spin"></div></div>`;
-  $("#tDaily").onclick=startDaily;$("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");$("#tSaved").onclick=openSaved;
-  updateStreakPill(0);
-  loadBookmarks();
+    <div id="masteryWrap"></div>
+    <div class="section-h"><h2>Keep going</h2></div>
+    <div class="tiles">
+      <button class="tile map" id="tConquest"><span class="ic">🗺️</span><span><span class="tt">Conquest</span><span class="ts">Level up, topic by topic</span></span><span class="go">→</span></button>
+      <button class="tile extra" id="tExtra"><span class="ic">↺</span><span><span class="tt">Reconquer</span><span class="ts">Fix your exact misses</span></span><span class="go" id="extraGo">→</span></button>
+      <button class="tile board" id="tBoard"><span class="ic">🏆</span><span><span class="tt">Leaderboard</span><span class="ts">Daily · accuracy · streak</span></span><span class="go">→</span></button>
+      <button class="tile saved" id="tSaved"><span class="ic">⭐</span><span><span class="tt">Saved</span><span class="ts">Revise your bookmarks</span></span><span class="go" id="savedGo">→</span></button>
+      <button class="tile tests" id="tTests"><span class="ic">📚</span><span><span class="tt">Drills</span><span class="ts">Unlock by conquering a topic</span></span><span class="go">🔒</span></button>
+    </div>`;
+  $("#missionBtn").onclick=startDaily;
+  $("#tConquest").onclick=openConquest;$("#tExtra").onclick=openExtra;$("#tTests").onclick=openTests;$("#tBoard").onclick=()=>openBoard("daily");$("#tSaved").onclick=openSaved;
+  updateStreakPill(0);loadBookmarks();
   try{const m=await api("/me?pin="+encodeURIComponent(ME.pin)+"&day="+today());if(m.ok){
-    $("#hSolved").textContent=m.solved;$("#hAcc").textContent=m.seen?Math.round(m.solved/m.seen*100)+"%":"—";updateStreakPill(m.streak);
-    $("#hCP").textContent=m.conquest;$("#hCPsub").textContent=m.solved+" solved of "+m.seen+" seen";
-    const cb=m.comeback;$("#hCB").textContent=cb.total?cb.resolved+"/"+cb.total:"0";
-    $("#hCBsub").innerHTML=cb.total?`${cb.redos} extra solves · batch avg ${cb.peerAvg}${cb.redos>cb.peerAvg?' · <b style="color:var(--good)">ahead</b>':''}`:"no misses yet — nice";
-    $("#extraGo").outerHTML=cb.open>0?`<span class="pill warn">${cb.open} to fix</span>`:`<span class="go">→</span>`;
-    dailyDoneToday=!!m.dailyDone;if(m.dailyDone)$("#dailyGo").outerHTML=`<span class="pill">✓ done</span>`;
-    const nz=$("#streakNudge");
-    if(m.dailyDone){nz.innerHTML="";}
-    else{const eve=new Date().getHours()>=17,st=m.streak||0;
-      nz.innerHTML=`<button class="nudge ${eve?'hot':''}" id="nudgeBtn">🔥 <b>${st>0?st+"-day streak on the line":"Start your streak"}</b> — ${eve?"finish today's Daily Duel before midnight":"today's Daily Duel isn't done yet"}<span class="pl">Play →</span></button>`;
-      $("#nudgeBtn").onclick=startDaily;}
-    renderAreas(m.mastery);renderInsights(m);
+    $("#hAcc").textContent=m.seen?Math.round(m.solved/m.seen*100)+"%":"—";updateStreakPill(m.streak);
+    $("#hCP").textContent=m.conquest;
+    const cb=m.comeback;$("#extraGo").outerHTML=cb.open>0?`<span class="pill warn">${cb.open} to fix</span>`:`<span class="go">→</span>`;
+    dailyDoneToday=!!m.dailyDone;
+    if(m.dailyDone){$("#missTag").textContent="✓ done today";$("#missTitle").textContent="Daily Duel complete";$("#missSub").textContent="Fresh 10 tomorrow — keep the streak alive.";const b=$("#missionBtn");b.textContent="See the leaderboard →";b.onclick=()=>openBoard("daily");$("#missionCard").classList.add("done");}
+    else if(new Date().getHours()>=17){$("#missionCard").classList.add("urgent");$("#missSub").textContent="Finish before midnight — your streak is on the line.";}
+    const imp=improveText(m),ib=$("#improveBar");if(ib)ib.innerHTML=`<div class="improve ${imp.good?'':'soft'}"><span class="ar">▲</span>${imp.txt}</div>`;
+    renderInsights(m);renderMastery(m);
   }}catch(e){}
   try{const lb=await api("/leaderboard?type=daily&day="+today());if(lb.ok){const i=lb.rows.findIndex(x=>x.name===ME.name);$("#hRank").textContent=i>=0?"#"+(i+1):"—";}}catch(e){}
   maybeWelcome();
+}
+function improveText(m){
+  const t=m.trend||[];
+  if(t.length>=4){const acc=x=>x.correct/(x.total||10),mid=Math.floor(t.length/2),e=t.slice(0,mid),l=t.slice(mid);
+    const a=e.reduce((s,x)=>s+acc(x),0)/e.length,b=l.reduce((s,x)=>s+acc(x),0)/l.length,d=Math.round((b-a)*100);
+    if(d>=3)return{txt:`You're up ${d}% this week — best run yet`,good:true};}
+  if((m.streak||0)>=2)return{txt:`${m.streak}-day streak going strong — keep it alive`,good:true};
+  if((m.seen||0)>=10)return{txt:`${m.seen} questions solved so far — every rep counts`,good:true};
+  return{txt:`Get today's Daily Duel in to start your climb`,good:false};
+}
+function renderMastery(m){
+  const box=$("#masteryWrap");if(!box)return;
+  const cl={};(m.levels||[]).forEach(x=>{cl[x.topic]=(cl[x.topic]||0)+1;});
+  const seen={};(m.mastery||[]).forEach(x=>{seen[x.topic]=(seen[x.topic]||0)+(x.seen||0);});
+  const topics=[...new Set([...Object.keys(cl),...Object.keys(seen)])]
+    .map(t=>({t,cleared:Math.min(3,cl[t]||0),seen:seen[t]||0}))
+    .filter(x=>x.cleared>0||x.seen>=5).sort((a,b)=>b.cleared-a.cleared||b.seen-a.seen).slice(0,6);
+  const mastered=Object.values(cl).filter(n=>n>=3).length;
+  if(!topics.length){box.innerHTML=`<div class="section-h"><h2>Topic mastery</h2></div><div class="card"><div class="empty">Clear Conquest levels to earn mastery stars ⭐</div></div>`;return;}
+  box.innerHTML=`<div class="section-h"><h2>Topic mastery</h2><span class="link" id="mAll">Conquest →</span></div>
+    <div class="card">
+      ${mastered>0?`<div class="prestige"><div class="pz">★</div><div><b>${mastered} topic${mastered>1?"s":""} mastered</b><div class="psub">all 3 levels cleared — gold earned</div></div></div>`:""}
+      <div class="mast">${topics.map(x=>`<div class="mrow"><span class="nm">${dName(x.t)}</span><div class="bar"><i style="width:${Math.round(x.cleared/3*100)}%"></i></div><span class="star ${x.cleared>=3?'on':'off'}">★</span></div>`).join("")}</div>
+    </div>`;
+  const a=$("#mAll");if(a)a.onclick=openConquest;
 }
 function maybeWelcome(){
   let seen;try{seen=localStorage.getItem("ipmat_welcomed");}catch(e){}
@@ -459,6 +510,13 @@ function maybeWelcome(){
 }
 const FAMILY={};const TW={"Warm-Up":1,"Exam-Relevant":2,"Heavy & Tricky":3,"Killer":4};
 SYLLABUS.forEach(([f,ts])=>ts.forEach(t=>FAMILY[t]=f));
+/* Stuck? Nudge me — reveal one method hint (never the answer) */
+function nudgeButton(qkey,targetSel){const b=el("button","btn ghost sm nudgebtn","💡 Stuck? Nudge me");
+  b.onclick=async()=>{b.disabled=true;b.textContent="💡 …";
+    let r;try{r=await api("/hint?qkey="+encodeURIComponent(qkey));}catch(e){r=null;}
+    if(r&&r.ok&&r.hint){const box=el("div","hintbox");box.innerHTML=`<span class="hl">💡 Hint</span> ${r.hint}`;const t=$(targetSel);if(t)t.insertBefore(box,t.firstChild);b.remove();}
+    else{b.disabled=false;b.textContent="💡 Stuck? Nudge me";}};
+  return b;}
 function renderAreas(mastery){
   const box=$("#areaCard"),cp={};SYLLABUS.forEach(([f])=>cp[f]=0);
   (mastery||[]).forEach(x=>{const f=FAMILY[x.topic];if(f)cp[f]+=(x.solved||0)*(TW[x.tier]||1);});
@@ -563,7 +621,8 @@ function pRender(){
     if(PS.answered){inp.value=PS.sel;}w.appendChild(inp);A.appendChild(w);if(!PS.answered)A.appendChild(numKeypad(inp));}
   if(PS.answered)$("#pFb").appendChild(fbBlock(PS.lastCorrect,null,{answer:PS.correctAns,trap:q.trap||"",sol:PS.lastSol||q.sol||""}));
   const B=$("#pB");
-  if(!PS.answered){const c=el("button","btn","Check");c.onclick=()=>{c.disabled=true;pCheck();};B.appendChild(c);}
+  if(!PS.answered){const c=el("button","btn","Check");c.onclick=()=>{c.disabled=true;pCheck();};B.appendChild(c);
+    if(q._static)$("#pFb").appendChild(nudgeButton(q._static,"#pFb"));}
   else{const done=PS.mastered>=PS.goal,n=el("button","btn",done?"Finish — cleared →":(PS.lastCorrect?"Next →":"Retry this one →"));n.onclick=()=>{PS.i++;pServe();};B.appendChild(n);
     if(!done&&!PS.lastCorrect&&(PS.cur._tries||0)>=3){const sk=el("button","btn ghost sm","⚑ Looks wrong? Flag & skip");sk.onclick=pFlagSkip;B.appendChild(sk);}}
 }
@@ -730,7 +789,8 @@ function exRender(){const q=ex.list[ex.i];setReportCtx(q.qkey,"extra",q.stem);co
     if(ex.answered){inp.value=ex.sel;}w.appendChild(inp);A.appendChild(w);if(!ex.answered)A.appendChild(numKeypad(inp));}
   if(ex.answered)$("#exFb").appendChild(fbBlock(ex.lastCorrect,null,{answer:ex.ansText,trap:"",sol:ex.lastSol||""}));
   const btns=$("#exBtns");
-  if(!ex.answered){const c=el("button","btn","Check");c.onclick=()=>{c.disabled=true;exLock();};btns.appendChild(c);}
+  if(!ex.answered){const c=el("button","btn","Check");c.onclick=()=>{c.disabled=true;exLock();};btns.appendChild(c);
+    $("#exFb").appendChild(nudgeButton(ex.list[ex.i].qkey,"#exFb"));}
   else{const last=ex.i>=ex.list.length-1,n=el("button","btn",last?"Finish →":(ex.lastCorrect?"Next →":"Skip for now →"));n.onclick=exNext;btns.appendChild(n);}
 }
 async function exLock(){if(ex.answered||ex.submitting)return;
