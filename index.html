@@ -603,7 +603,7 @@ async function openPractice(topic,level){
 function mkStatic(s){return {kind:s.type==="mcq"?"mcq":"int",stem:s.stem,options:s.options,_static:s.id};}
 function mkGen(topic,level){const g=pick(genByTL(topic,level));const q=g.make();return {kind:q.kind,stem:q.q,options:q.options,answer:q.answer,sol:q.sol,trap:q.trap,_gen:g.id};}
 function pServe(){if(PS.mastered>=PS.goal){pFinish();return;}PS.cur=PS.queue[PS.i];PS.answered=false;PS.sel=null;pRender();}
-function numKeypad(inp,onChange){const k=el("div","kpad");["1","2","3","4","5","6","7","8","9","C","0","⌫"].forEach(d=>{const b=el("button",(d==="C"||d==="⌫")?"act":"",d);b.type="button";b.onclick=()=>{if(d==="C")inp.value="";else if(d==="⌫")inp.value=inp.value.slice(0,-1);else inp.value+=d;if(onChange)onChange();};k.appendChild(b);});return k;}
+function numKeypad(inp,onChange){const k=el("div","kpad");["1","2","3","4","5","6","7","8","9","±","0","⌫"].forEach(d=>{const b=el("button",(d==="±"||d==="⌫")?"act":"",d);b.type="button";b.onclick=()=>{if(d==="±")inp.value=inp.value.startsWith("-")?inp.value.slice(1):("-"+inp.value);else if(d==="⌫")inp.value=inp.value.slice(0,-1);else inp.value+=d;if(onChange)onChange();};k.appendChild(b);});return k;}
 function pRender(){
   const q=PS.cur,s=$("#practice"),stem=q.stem;
   setReportCtx(q._gen?("g:"+q._gen):q._static,"practice",stem);

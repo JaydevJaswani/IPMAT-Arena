@@ -488,8 +488,14 @@ async function hint(req_or_url, env) {
   const q = await env.DB.prepare("SELECT trap, solution FROM questions WHERE id=?").bind(qkey).first();
   if (!q) return json({ ok: false, error: "not found" }, 404);
   let h = (q.trap || "").trim();
-  if (!h) { const sol = (q.solution || "").trim(); h = (sol.split(/(?<=[.。!?])\s+/)[0] || sol.slice(0, 140)).trim(); }
-  if (!h) h = "Re-read what's being asked, then write down the formula that fits before you compute.";
+  if (!h) {
+    const sol = (q.solution || "").trim();
+    let first = (sol.split(/(?<=[.。!?])\s+/)[0] || sol).trim();   // opening sentence of the method
+    if (first.includes("=")) first = first.split("=")[0].trim();   // never show the computed value — cut at the first "="
+    first = first.slice(0, 120).trim();
+    if (first.replace(/[^A-Za-z]/g, "").length >= 12) h = first;   // only if it's a real method cue, not a stray fragment
+  }
+  if (!h) h = "Start from the definition: write the formula that fits, then plug in what you're given.";
   return json({ ok: true, hint: h });
 }
 // Grade a single question by id (for re-attempting a saved/bookmarked question). Not logged.
